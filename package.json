@@ -13,9 +13,20 @@
   "type": "commonjs",
   "dependencies": {
     "@sendgrid/mail": "^8.1.5",
-    "dotenv": "^17.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.1.0",
+    "express": "^5.1.0",
     "nodemailer": "^7.0.4",
     "pdfkit": "^0.17.1",
-    "stripe": "^18.2.1"
-  }
+    "stripe": "^18.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Spacetrader38/fastlap-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Spacetrader38/fastlap-backend/issues"
+  },
+  "homepage": "https://github.com/Spacetrader38/fastlap-backend#readme"
+  
 }
