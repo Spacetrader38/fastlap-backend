@@ -4,39 +4,32 @@ const PDFDocument = require('pdfkit');
 const sgMail = require('@sendgrid/mail');
 const fs = require('fs');
 const path = require('path');
+const Order = require('../models/Order');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // ta clé SendGrid dans .env
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // clé SendGrid dans .env
 
-// Génération PDF en mémoire et envoi mail
+// Envoi facture + setups
 router.post('/', async (req, res) => {
   try {
     const { email, civilite, nom, prenom, adresse, ville, codePostal, telephone, commande } = req.body;
-      console.log('Reçu côté backend :', req.body);
-    console.log('Téléphone reçu :', telephone);
+    console.log('Reçu côté backend :', req.body);
     if (!email || !nom || !prenom || !civilite || !commande) {
       return res.status(400).json({ error: 'Infos client ou commande manquantes' });
     }
 
-    // Calculs pour facture
     const totalHT = commande.reduce((acc, item) => acc + (item.price || 0), 0);
     const tva = totalHT * 0.2;
     const totalTTC = totalHT + tva;
 
-    // Format texte commande pour mail HTML
-    const commandeTexte = commande
-      .map(item => `${item.name} - ${item.price.toFixed(2)} €`)
-      .join('\n');
+    const commandeTexte = commande.map(item => `${item.name} - ${item.price.toFixed(2)} €`).join('\n');
 
-    // Création du PDF en mémoire
     const doc = new PDFDocument({ margin: 50 });
     let buffers = [];
     doc.on('data', buffers.push.bind(buffers));
     doc.on('end', async () => {
       const pdfData = Buffer.concat(buffers);
 
-      // ---------- GESTION DES SETUPS EN PIECE JOINTE ----------
       const setupAttachments = commande.map(item => {
-        console.log('item.name reçu du frontend =', item.name);
         const filePath = path.join(__dirname, '..', 'setups', `${item.name}.svm`);
         if (fs.existsSync(filePath)) {
           return {
@@ -50,9 +43,7 @@ router.post('/', async (req, res) => {
           return null;
         }
       }).filter(Boolean);
-      // --------------------------------------------------------
 
-      // Préparer mail avec pièce jointe PDF et setups
       const msg = {
         to: email,
         from: 'fastlap.engineering@gmail.com',
@@ -78,11 +69,10 @@ router.post('/', async (req, res) => {
 
       await sgMail.send(msg);
 
-      // ----------- HISTORIQUE COMMANDE (A + B) ------------
+      // Enregistrement MongoDB
       try {
-        const orderHistoryPath = path.join(__dirname, '..', 'orders-history.json');
-        const orderToSave = {
-          date: new Date().toISOString(),
+        const orderToSave = new Order({
+          date: new Date(),
           email,
           civilite,
           nom,
@@ -95,36 +85,25 @@ router.post('/', async (req, res) => {
           totalHT: totalHT.toFixed(2),
           tva: tva.toFixed(2),
           totalTTC: totalTTC.toFixed(2),
-        };
+        });
 
-        let allOrders = [];
-        if (fs.existsSync(orderHistoryPath)) {
-          allOrders = JSON.parse(fs.readFileSync(orderHistoryPath));
-        }
-        allOrders.push(orderToSave);
-        fs.writeFileSync(orderHistoryPath, JSON.stringify(allOrders, null, 2));
+        await orderToSave.save();
+        console.log('✅ Commande enregistrée dans MongoDB');
       } catch (err) {
-        console.error('Erreur lors de la sauvegarde de la commande dans l\'historique :', err);
+        console.error('❌ Erreur MongoDB lors de l\'enregistrement de la commande :', err);
       }
-      // ----------------------------------------------------
 
       res.status(200).json({ message: 'Mail avec facture et setup(s) envoyé avec succès' });
     });
 
-    // Contenu du PDF
     doc.fontSize(20).text('Facture FastLap Engineering', { align: 'center' });
-
-    // En-tête client avec civilité, prénom, nom, adresse complète en haut à gauche
     doc.moveDown();
     doc.fontSize(12);
     doc.text(`${civilite} ${prenom} ${nom}`);
-    doc.text(adresse); 
-    doc.text(`${ville} - ${codePostal}`);       
-    if (telephone) {
-    doc.text(`Téléphone : ${telephone}`);
-    }
+    doc.text(adresse);
+    doc.text(`${ville} - ${codePostal}`);
+    if (telephone) doc.text(`Téléphone : ${telephone}`);
 
-    // Date à droite en haut
     const dateStr = new Date().toLocaleDateString();
     doc.fontSize(12).text(`Date : ${dateStr}`, { align: 'right' });
 
@@ -144,8 +123,7 @@ router.post('/', async (req, res) => {
 
     doc.moveDown(2);
     doc.font('Helvetica').fontSize(10).text(
-      `Mentions légales : Service numérique livré immédiatement après paiement. En application de l’article L221-28 du Code de la consommation, aucun droit de rétractation ne peut être exercé. TVA applicable : 20 %.`
-      ,
+      `Mentions légales : Service numérique livré immédiatement après paiement. En application de l’article L221-28 du Code de la consommation, aucun droit de rétractation ne peut être exercé. TVA applicable : 20 %.`,
       { align: 'center' }
     );
 
@@ -157,15 +135,26 @@ router.post('/', async (req, res) => {
   }
 });
 
-// ----------- ROUTE LECTURE HISTORIQUE (C) ---------------
-router.get('/history', (req, res) => {
-  const orderHistoryPath = path.join(__dirname, '..', 'orders-history.json');
-  if (!fs.existsSync(orderHistoryPath)) {
-    return res.json([]);
+// Lecture historique commandes
+router.get('/history', async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ date: -1 });
+    res.json(orders);
+  } catch (err) {
+    console.error('Erreur récupération historique :', err);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
-  const allOrders = JSON.parse(fs.readFileSync(orderHistoryPath));
-  res.json(allOrders);
 });
-// --------------------------------------------------------
+
+// 🔴 Réinitialisation de l'historique des commandes
+router.delete('/history/reset', async (req, res) => {
+  try {
+    await Order.deleteMany({});
+    res.json({ message: '✅ Historique des commandes réinitialisé' });
+  } catch (err) {
+    console.error('Erreur suppression historique :', err);
+    res.status(500).json({ error: 'Erreur serveur lors de la suppression' });
+  }
+});
 
 module.exports = router;
