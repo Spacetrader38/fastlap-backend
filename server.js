@@ -1,5 +1,5 @@
 require('dotenv').config();
-
+const mongoose = require('mongoose');
 const express = require("express");
 const cors = require("cors");
 
@@ -13,6 +13,14 @@ app.use(express.json());
 app.use("/api/payment", paymentRoutes);
 app.use('/api/clientInfo', clientInfoRoutes);
 app.use('/api/invoice', invoiceRoutes);
+
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ Connexion MongoDB réussie"))
+.catch(err => console.error("❌ Erreur MongoDB :", err));
+
 
 let files = [
   {

@@ -4,7 +4,7 @@ const PDFDocument = require('pdfkit');
 const sgMail = require('@sendgrid/mail');
 const fs = require('fs');
 const path = require('path');
-const Order = require('../models/Orders');
+const Order = require('../models/Order');
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY); // clé SendGrid dans .env
 
