@@ -13,6 +13,7 @@ const invoiceRoutes = require('./routes/invoice');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
 sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Clé SendGrid
 
 app.use(cors());
@@ -42,16 +43,15 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
         from: "fastlap.engineering@gmail.com",
         subject: "Votre remboursement a été effectué – FastLap Engineering",
         html: `
-          <p>Bonjour ${fullName},</p>
+          <p>Bonjour <strong>${fullName}</strong>,</p>
           <p>Nous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.</p>
           <p>Merci de votre compréhension.</p>
           <p>— L'équipe FastLap Engineering</p>
           <br/>
-          <a href="https://fastlap-engineering.netlify.app/" 
-             style="display:inline-block; padding:10px 20px; background-color:#ffc107; color:#000; text-decoration:none; border-radius:5px; font-weight:bold;">
-            🔁 Retour à la boutique
+          <a href="https://fastlap-engineering.netlify.app" style="display:inline-block;padding:10px 20px;background:#facc15;color:black;text-decoration:none;border-radius:8px;font-weight:bold;">
+            Retour à la boutique
           </a>
-        `
+        `,
       };
 
       sgMail
