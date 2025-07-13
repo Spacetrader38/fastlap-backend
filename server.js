@@ -40,9 +40,21 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
     if (email) {
       const msg = {
         to: email,
-        from: "fastlap.engineering@gmail.com", // Adresse d'expéditeur confirmée
+        from: "fastlap.engineering@gmail.com", // Adresse expéditeur confirmée
         subject: "Votre remboursement a été effectué – FastLap Engineering",
-        text: `Bonjour ${fullName},\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering\n\nRetour à la boutique : https://fastlap-engineering.netlify.app`,
+        text: `Bonjour ${fullName},\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering`,
+        html: `
+          <p>Bonjour ${fullName},</p>
+          <p>Nous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.</p>
+          <p>
+            <a href="https://fastlap-engineering.netlify.app" 
+               style="display:inline-block;padding:10px 20px;background-color:#ffcc00;color:#000;text-decoration:none;border-radius:5px;font-weight:bold;">
+               Retour à la boutique
+            </a>
+          </p>
+          <p>Merci de votre compréhension.</p>
+          <p>— L'équipe FastLap Engineering</p>
+        `,
       };
 
       sgMail
