@@ -2,14 +2,62 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const express = require("express");
 const cors = require("cors");
+const bodyParser = require("body-parser");
+const Stripe = require("stripe");
+const sgMail = require("@sendgrid/mail");
 
 const app = express();
 const paymentRoutes = require('./routes/payment');
 const clientInfoRoutes = require('./routes/clientInfo');
 const invoiceRoutes = require('./routes/invoice');
 
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Ajouté ici
+
 app.use(cors());
-app.use(express.json());
+
+// ATTENTION : le webhook Stripe doit être défini AVANT express.json()
+app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    console.error("❌ Erreur Webhook Stripe :", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object;
+    const email = charge.billing_details.email || charge.receipt_email;
+
+    console.log(`💸 Remboursement détecté pour : ${email}`);
+
+    if (email) {
+      const msg = {
+        to: email,
+        from: "fastlap.engineering@gmail.com", // Modifié ici
+        subject: "Votre remboursement a été effectué – FastLap Engineering",
+        text: `Bonjour,\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering`,
+      };
+
+      sgMail
+        .send(msg)
+        .then(() => console.log(`✉️ Email de remboursement envoyé à ${email}`))
+        .catch((error) =>
+          console.error("❌ Erreur SendGrid :", error.response?.body || error.message)
+        );
+    }
+  }
+
+  res.status(200).json({ received: true });
+});
+
+app.use(express.json()); // Après le webhook
+
 app.use("/api/payment", paymentRoutes);
 app.use('/api/clientInfo', clientInfoRoutes);
 app.use('/api/invoice', invoiceRoutes);
@@ -20,7 +68,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => console.log("✅ Connexion MongoDB réussie"))
 .catch(err => console.error("❌ Erreur MongoDB :", err));
-
 
 let files = [
   {
@@ -59,5 +106,4 @@ app.delete("/files/:index", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => console.log(`Backend démarré sur le port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Backend démarré sur le port ${PORT}`));
