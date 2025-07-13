@@ -14,11 +14,11 @@ const invoiceRoutes = require('./routes/invoice');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Ajouté ici
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Clé SendGrid
 
 app.use(cors());
 
-// ATTENTION : le webhook Stripe doit être défini AVANT express.json()
+// Webhook Stripe (doit être avant express.json)
 app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
@@ -33,15 +33,16 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
   if (event.type === "charge.refunded") {
     const charge = event.data.object;
     const email = charge.billing_details.email || charge.receipt_email;
+    const fullName = charge.billing_details.name || "Client";
 
-    console.log(`💸 Remboursement détecté pour : ${email}`);
+    console.log(`💸 Remboursement détecté pour : ${fullName} (${email})`);
 
     if (email) {
       const msg = {
         to: email,
-        from: "fastlap.engineering@gmail.com", // Modifié ici
+        from: "fastlap.engineering@gmail.com", // Adresse d'expéditeur confirmée
         subject: "Votre remboursement a été effectué – FastLap Engineering",
-        text: `Bonjour,\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering`,
+        text: `Bonjour ${fullName},\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering`,
       };
 
       sgMail
@@ -56,7 +57,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
   res.status(200).json({ received: true });
 });
 
-app.use(express.json()); // Après le webhook
+app.use(express.json()); // après le webhook
 
 app.use("/api/payment", paymentRoutes);
 app.use('/api/clientInfo', clientInfoRoutes);
@@ -80,12 +81,10 @@ let files = [
   }
 ];
 
-// GET all files
 app.get("/files", (req, res) => {
   res.json(files);
 });
 
-// POST new file
 app.post("/files", (req, res) => {
   const { name, url } = req.body;
   if (!name || !url) {
@@ -95,7 +94,6 @@ app.post("/files", (req, res) => {
   res.status(201).json({ message: "File added" });
 });
 
-// DELETE file by index
 app.delete("/files/:index", (req, res) => {
   const index = parseInt(req.params.index, 10);
   if (isNaN(index) || index < 0 || index >= files.length) {
