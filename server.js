@@ -33,16 +33,22 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
   if (event.type === "charge.refunded") {
     const charge = event.data.object;
     const email = charge.billing_details.email || charge.receipt_email;
-    const fullName = charge.billing_details.name || "Client";
+    const rawName = charge.billing_details.name || "Client";
+
+    // Formatage du nom : première lettre en majuscule pour chaque mot
+    const fullName = rawName
+      .split(" ")
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
 
     console.log(`💸 Remboursement détecté pour : ${fullName} (${email})`);
 
     if (email) {
       const msg = {
         to: email,
-        from: "fastlap.engineering@gmail.com", // Adresse d'expéditeur confirmée
+        from: "fastlap.engineering@gmail.com",
         subject: "Votre remboursement a été effectué – FastLap Engineering",
-        text: `Bonjour ${fullName},\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering`,
+        text: `Bonjour ${fullName},\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering\n\n👉 Retour à la boutique : https://fastlap-engineering.netlify.app/`,
       };
 
       sgMail
