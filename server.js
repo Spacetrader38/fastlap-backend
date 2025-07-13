@@ -13,7 +13,6 @@ const invoiceRoutes = require('./routes/invoice');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
 sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Clé SendGrid
 
 app.use(cors());
@@ -33,13 +32,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
   if (event.type === "charge.refunded") {
     const charge = event.data.object;
     const email = charge.billing_details.email || charge.receipt_email;
-    const rawName = charge.billing_details.name || "Client";
-
-    // Formatage du nom : première lettre en majuscule pour chaque mot
-    const fullName = rawName
-      .split(" ")
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(" ");
+    const fullName = charge.billing_details.name || "Client";
 
     console.log(`💸 Remboursement détecté pour : ${fullName} (${email})`);
 
@@ -48,7 +41,17 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
         to: email,
         from: "fastlap.engineering@gmail.com",
         subject: "Votre remboursement a été effectué – FastLap Engineering",
-        text: `Bonjour ${fullName},\n\nNous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.\n\nMerci de votre compréhension.\n\n— L'équipe FastLap Engineering\n\n👉 Retour à la boutique : https://fastlap-engineering.netlify.app/`,
+        html: `
+          <p>Bonjour ${fullName},</p>
+          <p>Nous vous confirmons que votre commande a été remboursée. Le montant sera recrédité sur votre compte sous quelques jours.</p>
+          <p>Merci de votre compréhension.</p>
+          <p>— L'équipe FastLap Engineering</p>
+          <br/>
+          <a href="https://fastlap-engineering.netlify.app/" 
+             style="display:inline-block; padding:10px 20px; background-color:#ffc107; color:#000; text-decoration:none; border-radius:5px; font-weight:bold;">
+            🔁 Retour à la boutique
+          </a>
+        `
       };
 
       sgMail
