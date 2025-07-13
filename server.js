@@ -14,6 +14,8 @@ const invoiceRoutes = require('./routes/invoice');
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 app.use(cors());
 
 // ATTENTION : le webhook Stripe doit être défini AVANT express.json()
@@ -31,7 +33,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
   if (event.type === "charge.refunded") {
     const charge = event.data.object;
     const email = charge.billing_details.email || charge.receipt_email;
-    const name = `${charge.billing_details.name || ''}`.trim();
+    const name = charge.billing_details.name || "";
 
     console.log(`💸 Remboursement détecté pour : ${email}`);
 
@@ -41,23 +43,21 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
         from: process.env.EMAIL_FROM || "fastlap.engineering@gmail.com",
         subject: "Votre remboursement a été effectué – FastLap Engineering",
         html: `
-          <p>Bonjour ${name || 'client'},</p>
-
+          <p>Bonjour ${name.toLowerCase()},</p>
           <p>Nous vous confirmons que votre commande a été remboursée.<br>
           Le montant sera recrédité sur votre compte sous quelques jours.</p>
 
-          <p style="margin-top: 40px;">
+          <p>Merci de votre compréhension.</p>
+
+          <p>— L'équipe FastLap Engineering</p>
+
+          <p style="margin-top: 30px;">
             <a href="https://fastlap-engineering.netlify.app/" 
                style="background-color:#ffc107; color:#000; padding:10px 20px; text-decoration:none; border-radius:5px; font-weight:bold;">
                Retour à la boutique
             </a>
           </p>
-
-          <p style="margin-top: 40px;">
-            Merci de votre compréhension.<br><br>
-            — L'équipe FastLap Engineering
-          </p>
-        `,
+        `
       };
 
       sgMail
