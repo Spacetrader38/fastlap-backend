@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const Client = require('../models/Client'); // ✅ ajout du modèle MongoDB
 
 let clients = []; // stockage en mémoire, à remplacer par une vraie base plus tard
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   console.log('Requête POST /api/clientInfo reçue avec body:', req.body);
 
   try {
@@ -25,6 +26,19 @@ router.post('/', (req, res) => {
 
     clients.push(clientData); // sauvegarde en mémoire
     console.log('Client enregistré:', clientData);
+
+    // ✅ Sauvegarde aussi en MongoDB sans bloquer le reste
+    try {
+      await Client.create({
+        nom: clientData.nom,
+        prenom: clientData.prenom,
+        email: clientData.email,
+        cgvAccepted: clientData.cgvAccepted === true
+      });
+      console.log('Client sauvegardé en base MongoDB.');
+    } catch (err) {
+      console.error('Erreur MongoDB (non bloquante) :', err.message);
+    }
 
     return res.status(201).json({ message: "Infos client enregistrées" });
 

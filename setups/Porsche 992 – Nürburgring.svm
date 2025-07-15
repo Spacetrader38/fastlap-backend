@@ -1,6 +1,6 @@
-VehicleClassSetting="Porsche_Cup"
+VehicleClassSetting="2023_PCC_GB Porsche_Cup"
 UpgradeSetting=(0,0,0,0)
-//VEH=D:\Jeux ST\steamapps\common\rFactor 2\Installed\Vehicles\Porsche_992_GT3_Cup_2022\1.03\57_HUBERC3EACFD4.VEH
+//VEH=D:\Jeux ST\steamapps\common\rFactor 2\Installed\Vehicles\Porsche_992_GT3_Cup_2022\1.11\5_STANLEY2311E3DE7.VEH
 //UpgradeClass=
 //Note: settings commented out if using the default
 
@@ -13,7 +13,7 @@ Symmetric=1
 //WedgeSetting=0//N/A
 //FrontTireCompoundSetting=0//Pneus sec
 //RearTireCompoundSetting=0//Pneus sec
-FuelSetting=47//48L (3tours)
+FuelSetting=29//30L (3tours)
 //NumPitstopsSetting=0//0
 //Pitstop1Setting=50//N/A
 //Pitstop2Setting=50//N/A
@@ -32,7 +32,7 @@ FuelSetting=47//48L (3tours)
 //RWSetting=2//P6
 
 [BODYAERO]
-WaterRadiatorSetting=2//67%
+//WaterRadiatorSetting=0//No tape
 //OilRadiatorSetting=0//Non-adjustable
 //BrakeDuctSetting=0//Non-adjustable
 //BrakeDuctRearSetting=0//Non-adjustable
@@ -40,11 +40,11 @@ WaterRadiatorSetting=2//67%
 [SUSPENSION]
 //FrontWheelTrackSetting=0//Non-adjustable
 //RearWheelTrackSetting=0//Non-adjustable
-FrontAntiSwaySetting=1//P1
-RearAntiSwaySetting=1//P1
-FrontToeInSetting=29//-0.088 deg
+FrontAntiSwaySetting=2//P2
+RearAntiSwaySetting=2//P2
+FrontToeInSetting=27//-0.146 deg
 //FrontToeOffsetSetting=0//0 °
-//RearToeInSetting=39//0.506 deg
+RearToeInSetting=52//0.831 deg
 //RearToeOffsetSetting=0//0 °
 //LeftCasterSetting=0//Non-adjustable
 //RightCasterSetting=0//Non-adjustable
@@ -81,7 +81,7 @@ FrontToeInSetting=29//-0.088 deg
 
 [CONTROLS]
 //SteerLockSetting=6//524° (16.8°)
-RearBrakeSetting=3//56.0:44.0
+RearBrakeSetting=1//56.6:43.4
 BrakePressureSetting=40//80 kgf (100%)
 //HandfrontbrakePressSetting=0//N/A
 //HandbrakePressSetting=0//N/A
@@ -95,6 +95,9 @@ BrakePressureSetting=40//80 kgf (100%)
 [ENGINE]
 //RevLimitSetting=0//8,750
 //EngineBoostSetting=0//1
+//RegenerationMapSetting=0//0%
+//ElectricMotorMapSetting=0//0
+//Push2PassMapSetting=0//0
 //EngineMixtureSetting=0//0
 //EngineBrakingMapSetting=0//0
 
@@ -111,7 +114,7 @@ Gear6Setting=0//1.07 (4.00)
 //DiffPumpSetting=0//N/A
 //DiffPowerSetting=0//Non-adjustable
 //DiffCoastSetting=0//Non-adjustable
-DiffPreloadSetting=30//110 Nm
+DiffPreloadSetting=40//120 Nm
 //RearSplitSetting=0// 0.0:100.0
 //GearAutoUpShiftSetting=0//Sans
 //GearAutoDownShiftSetting=0//Sans
@@ -124,7 +127,7 @@ PressureSetting=0//140 kPa
 //TenderSpringSetting=0//Standard
 //TenderTravelSetting=0//Standard
 //SpringRubberSetting=0//Detacher
-RideHeightSetting=12//79.0 mm
+RideHeightSetting=2//69.0 mm
 //SlowBumpSetting=0//1
 //FastBumpSetting=0//1
 //SlowReboundSetting=0//1
@@ -140,7 +143,7 @@ PressureSetting=0//140 kPa
 //TenderSpringSetting=0//Standard
 //TenderTravelSetting=0//Standard
 //SpringRubberSetting=0//Detacher
-RideHeightSetting=12//79.0 mm
+RideHeightSetting=2//69.0 mm
 //SlowBumpSetting=0//1
 //FastBumpSetting=0//1
 //SlowReboundSetting=0//1
@@ -149,7 +152,7 @@ RideHeightSetting=12//79.0 mm
 //BrakePadSetting=0//1
 
 [REARLEFT]
-CamberSetting=10//-4.00 deg
+//CamberSetting=11//-3.90 deg
 PressureSetting=0//140 kPa
 //PackerSetting=0//0.0 mm
 //SpringSetting=0//300 N/mm
@@ -165,7 +168,7 @@ PressureSetting=0//140 kPa
 //BrakePadSetting=0//1
 
 [REARRIGHT]
-CamberSetting=10//-4.00 deg
+//CamberSetting=11//-3.90 deg
 PressureSetting=0//140 kPa
 //PackerSetting=0//0.0 mm
 //SpringSetting=0//300 N/mm
