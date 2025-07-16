@@ -78,6 +78,11 @@ app.use("/api/payment", paymentRoutes);
 app.use('/api/clientInfo', clientInfoRoutes);
 app.use('/api/invoice', invoiceRoutes);
 
+// ✅ Route GET pour monitoring (UptimeRobot, etc.)
+app.get("/", (req, res) => {
+  res.status(200).send("✅ FastLap backend is running");
+});
+
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
