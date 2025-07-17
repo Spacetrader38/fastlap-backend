@@ -10,7 +10,7 @@ require('dotenv').config();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 router.post('/create-checkout-session', async (req, res) => {
-  const { productName, productPrice, successUrl, cancelUrl } = req.body;
+  const { productName, productPrice, successUrl, cancelUrl, customerEmail } = req.body;
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -26,6 +26,7 @@ router.post('/create-checkout-session', async (req, res) => {
         quantity: 1,
       }],
       mode: 'payment',
+      customer_email: customerEmail, // 👈 Envoi de l'email à Stripe
       success_url: successUrl,
       cancel_url: cancelUrl,
     });
