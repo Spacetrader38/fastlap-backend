@@ -46,7 +46,7 @@ router.post('/', async (req, res) => {
 
       const msg = {
         to: email,
-        from: 'fastlap.engineering@gmail.com',
+        from: 'contact@fastlap-engineering.fr',
         subject: 'Votre facture FastLap Engineering',
         text: `Bonjour ${civilite} ${prenom} ${nom},\n\nMerci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.\n\nCommande:\n${commandeTexte}\n\nTotal HT: ${totalHT.toFixed(2)} €\nTVA (20%): ${tva.toFixed(2)} €\nTotal TTC: ${totalTTC.toFixed(2)} €\n\nCordialement,\nFastLap Engineering`,
         html: `<p>Bonjour <strong>${civilite} ${prenom} ${nom}</strong>,</p>

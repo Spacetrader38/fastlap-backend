@@ -40,7 +40,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
     if (email) {
       const msg = {
         to: email,
-        from: process.env.EMAIL_FROM || "fastlap.engineering@gmail.com",
+        from: process.env.EMAIL_FROM || "contact@fastlap-engineering.fr",
         subject: "Votre remboursement a été effectué – FastLap Engineering",
         html: `
           <p>Bonjour ${name.toLowerCase()},</p>
