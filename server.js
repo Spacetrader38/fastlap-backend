@@ -34,6 +34,13 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
     const charge = event.data.object;
     const email = charge.billing_details.email || charge.receipt_email;
     const name = charge.billing_details.name || "";
+    const prenom = name.split(" ")[0] || "";
+    const nom = name.split(" ").slice(1).join(" ") || "";
+
+    const capitalize = str =>
+      typeof str === "string" && str.length
+        ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
+        : "";
 
     console.log(`💸 Remboursement détecté pour : ${email}`);
 
