@@ -55,7 +55,7 @@ router.post('/', async (req, res) => {
                <p>Merci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.</p>
                <pre><strong>Commande :</strong><br/>${commandeTexte.replace(/\n/g, '<br/>')}</pre>
                <p>Total HT : ${totalHT.toFixed(3)} €<br/>
-               TVA (20%) : ${totalTVA.toFixed(2)} €<br/>
+               TVA (20%) : ${totalTVA.toFixed(3)} €<br/>
                <strong>Total TTC : ${totalTTC.toFixed(2)} €</strong></p>
                <p>Cordialement,<br/>FastLap Engineering</p>`,
         attachments: [
