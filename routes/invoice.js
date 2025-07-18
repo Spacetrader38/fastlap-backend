@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
 
     const totalHT = commande.reduce((acc, item) => acc + (item.price || 0), 0);
     const tva = totalHT * 0.2;
-    const totalTTC = totalHT + tva;
+    const totalTTC = parseFloat(totalHT.toFixed(2)) + parseFloat(tva.toFixed(2));
 
     const commandeTexte = commande.map(item => `${item.name} - ${item.price.toFixed(2)} €`).join('\n');
 
