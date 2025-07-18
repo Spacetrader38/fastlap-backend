@@ -17,10 +17,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Infos client ou commande manquantes' });
     }
 
-    // ✅ Calculs précis avec arrondis sécurisés
-    const totalHT = parseFloat(commande.reduce((acc, item) => acc + (item.price || 0), 0).toFixed(2));
-    const totalTVA = parseFloat((Math.round(totalHT * 20) / 100).toFixed(2)); // Évite flottants incorrects
-    const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2));
+    // ✅ Calculs précis : HT en 3 décimales, TVA et TTC en 2
+    const totalHTBrut = commande.reduce((acc, item) => acc + (item.price || 0), 0);
+    const totalHT = parseFloat(totalHTBrut.toFixed(3)); // HT en 3 décimales
+    const totalTVA = parseFloat((totalHT * 0.2).toFixed(2)); // TVA en 2 décimales
+    const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2)); // TTC en 2 décimales
 
     const commandeTexte = commande.map(item => `${item.name} - ${item.price.toFixed(2)} €`).join('\n');
 
@@ -49,11 +50,11 @@ router.post('/', async (req, res) => {
         to: email,
         from: process.env.EMAIL_FROM || 'contact@fastlap-engineering.fr',
         subject: 'Votre facture FastLap Engineering',
-        text: `Bonjour ${civilite} ${prenom} ${nom},\n\nMerci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.\n\nCommande:\n${commandeTexte}\n\nTotal HT: ${totalHT.toFixed(2)} €\nTVA (20%): ${totalTVA.toFixed(2)} €\nTotal TTC: ${totalTTC.toFixed(2)} €\n\nCordialement,\nFastLap Engineering`,
+        text: `Bonjour ${civilite} ${prenom} ${nom},\n\nMerci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.\n\nCommande:\n${commandeTexte}\n\nTotal HT: ${totalHT.toFixed(3)} €\nTVA (20%): ${totalTVA.toFixed(2)} €\nTotal TTC: ${totalTTC.toFixed(2)} €\n\nCordialement,\nFastLap Engineering`,
         html: `<p>Bonjour <strong>${civilite} ${prenom} ${nom}</strong>,</p>
                <p>Merci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.</p>
                <pre><strong>Commande :</strong><br/>${commandeTexte.replace(/\n/g, '<br/>')}</pre>
-               <p>Total HT : ${totalHT.toFixed(2)} €<br/>
+               <p>Total HT : ${totalHT.toFixed(3)} €<br/>
                TVA (20%) : ${totalTVA.toFixed(2)} €<br/>
                <strong>Total TTC : ${totalTTC.toFixed(2)} €</strong></p>
                <p>Cordialement,<br/>FastLap Engineering</p>`,
@@ -83,7 +84,7 @@ router.post('/', async (req, res) => {
           codePostal,
           telephone,
           commande,
-          totalHT: totalHT.toFixed(2),
+          totalHT: totalHT.toFixed(3),
           tva: totalTVA.toFixed(2),
           totalTTC: totalTTC.toFixed(2),
         });
@@ -118,7 +119,7 @@ router.post('/', async (req, res) => {
     });
 
     doc.moveDown();
-    doc.text(`Total HT : ${totalHT.toFixed(2)} €`);
+    doc.text(`Total HT : ${totalHT.toFixed(3)} €`);
     doc.text(`TVA (20%) : ${totalTVA.toFixed(2)} €`);
     doc.font('Helvetica-Bold').text(`Total TTC : ${totalTTC.toFixed(2)} €`, { align: 'right' });
 
@@ -133,26 +134,6 @@ router.post('/', async (req, res) => {
   } catch (error) {
     console.error('Erreur envoi mail avec facture:', error);
     res.status(500).json({ error: 'Erreur serveur lors de l\'envoi du mail' });
-  }
-});
-
-router.get('/history', async (req, res) => {
-  try {
-    const orders = await Order.find().sort({ date: -1 });
-    res.json(orders);
-  } catch (err) {
-    console.error('Erreur récupération historique :', err);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-router.delete('/history/reset', async (req, res) => {
-  try {
-    await Order.deleteMany({});
-    res.json({ message: '✅ Historique des commandes réinitialisé' });
-  } catch (err) {
-    console.error('Erreur suppression historique :', err);
-    res.status(500).json({ error: 'Erreur serveur lors de la suppression' });
   }
 });
 
