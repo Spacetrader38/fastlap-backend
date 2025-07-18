@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const Order = require('../models/orders');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // clé SendGrid dans .env
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Envoi facture + setups
 router.post('/', async (req, res) => {
@@ -17,9 +17,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Infos client ou commande manquantes' });
     }
 
-    // ✅ Méthode globale : somme HT puis calcul TVA
+    // ✅ Calculs précis avec arrondis sécurisés
     const totalHT = parseFloat(commande.reduce((acc, item) => acc + (item.price || 0), 0).toFixed(2));
-    const totalTVA = parseFloat((totalHT * 0.20).toFixed(2));
+    const totalTVA = parseFloat((Math.round(totalHT * 20) / 100).toFixed(2)); // Évite flottants incorrects
     const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2));
 
     const commandeTexte = commande.map(item => `${item.name} - ${item.price.toFixed(2)} €`).join('\n');
@@ -49,8 +49,8 @@ router.post('/', async (req, res) => {
         to: email,
         from: process.env.EMAIL_FROM || 'contact@fastlap-engineering.fr',
         subject: 'Votre facture FastLap Engineering',
-        text: `Bonjour ${civilite} ${nom} ${prenom},\n\nMerci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.\n\nCommande:\n${commandeTexte}\n\nTotal HT: ${totalHT.toFixed(2)} €\nTVA (20%): ${totalTVA.toFixed(2)} €\nTotal TTC: ${totalTTC.toFixed(2)} €\n\nCordialement,\nFastLap Engineering`,
-        html: `<p>Bonjour <strong>${civilite} ${nom} ${prenom}</strong>,</p>
+        text: `Bonjour ${civilite} ${prenom} ${nom},\n\nMerci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.\n\nCommande:\n${commandeTexte}\n\nTotal HT: ${totalHT.toFixed(2)} €\nTVA (20%): ${totalTVA.toFixed(2)} €\nTotal TTC: ${totalTTC.toFixed(2)} €\n\nCordialement,\nFastLap Engineering`,
+        html: `<p>Bonjour <strong>${civilite} ${prenom} ${nom}</strong>,</p>
                <p>Merci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.</p>
                <pre><strong>Commande :</strong><br/>${commandeTexte.replace(/\n/g, '<br/>')}</pre>
                <p>Total HT : ${totalHT.toFixed(2)} €<br/>
