@@ -99,9 +99,9 @@ router.post('/', async (req, res) => {
     doc.fontSize(20).text('Facture FastLap Engineering', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12);
-    doc.text(`${civilite} ${prenom} ${nom}`);
+    doc.text(`${civilite} ${nom} ${prenom}`);
     doc.text(adresse);
-    doc.text(`${ville} - ${codePostal}`);
+    doc.text(`${codePostal}, ${ville}`);
     if (telephone) doc.text(`Téléphone : ${telephone}`);
 
     const dateStr = new Date().toLocaleDateString('fr-FR');
