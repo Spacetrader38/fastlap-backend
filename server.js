@@ -32,7 +32,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
 
   if (event.type === "charge.refunded") {
     const charge = event.data.object;
-    const email = charge.billing_details.email || charge.receipt_email;
+    const email = charge.receipt_email || charge.billing_details.email;
     const name = charge.billing_details.name || "";
     const nom = name.split(" ")[0] || "";
     const prenom = name.split(" ").slice(1).join(" ") || "";
