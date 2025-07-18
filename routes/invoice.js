@@ -17,9 +17,24 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Infos client ou commande manquantes' });
     }
 
-    const totalHT = commande.reduce((acc, item) => acc + (item.price || 0), 0);
-    const tva = totalHT * 0.2;
-    const totalTTC = Math.floor((totalHT + tva) * 100) / 100;
+    // ✅ Calcul TTC par article avec arrondis pour éviter erreurs de somme
+    let totalHT = 0;
+    let totalTVA = 0;
+    let totalTTC = 0;
+
+    commande.forEach(item => {
+      const priceHT = item.price || 0;
+      const tvaArticle = parseFloat((priceHT * 0.2).toFixed(2));
+      const priceTTC = parseFloat((priceHT + tvaArticle).toFixed(2));
+
+      totalHT += priceHT;
+      totalTVA += tvaArticle;
+      totalTTC += priceTTC;
+    });
+
+    totalHT = parseFloat(totalHT.toFixed(2));
+    totalTVA = parseFloat(totalTVA.toFixed(2));
+    totalTTC = parseFloat(totalTTC.toFixed(2));
 
     const commandeTexte = commande.map(item => `${item.name} - ${item.price.toFixed(2)} €`).join('\n');
 
@@ -48,12 +63,12 @@ router.post('/', async (req, res) => {
         to: email,
         from: process.env.EMAIL_FROM || 'contact@fastlap-engineering.fr',
         subject: 'Votre facture FastLap Engineering',
-        text: `Bonjour ${civilite} ${prenom} ${nom},\n\nMerci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.\n\nCommande:\n${commandeTexte}\n\nTotal HT: ${totalHT.toFixed(2)} €\nTVA (20%): ${tva.toFixed(2)} €\nTotal TTC: ${totalTTC.toFixed(2)} €\n\nCordialement,\nFastLap Engineering`,
-        html: `<p>Bonjour <strong>${civilite} ${prenom} ${nom}</strong>,</p>
+        text: `Bonjour ${civilite} ${nom} ${prenom},\n\nMerci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.\n\nCommande:\n${commandeTexte}\n\nTotal HT: ${totalHT.toFixed(2)} €\nTVA (20%): ${totalTVA.toFixed(2)} €\nTotal TTC: ${totalTTC.toFixed(2)} €\n\nCordialement,\nFastLap Engineering`,
+        html: `<p>Bonjour <strong>${civilite} ${nom} ${prenom}</strong>,</p>
                <p>Merci pour votre achat. Voici votre facture et votre/vos setup(s) en pièce jointe.</p>
                <pre><strong>Commande :</strong><br/>${commandeTexte.replace(/\n/g, '<br/>')}</pre>
                <p>Total HT : ${totalHT.toFixed(2)} €<br/>
-               TVA (20%) : ${tva.toFixed(2)} €<br/>
+               TVA (20%) : ${totalTVA.toFixed(2)} €<br/>
                <strong>Total TTC : ${totalTTC.toFixed(2)} €</strong></p>
                <p>Cordialement,<br/>FastLap Engineering</p>`,
         attachments: [
@@ -83,7 +98,7 @@ router.post('/', async (req, res) => {
           telephone,
           commande,
           totalHT: totalHT.toFixed(2),
-          tva: tva.toFixed(2),
+          tva: totalTVA.toFixed(2),
           totalTTC: totalTTC.toFixed(2),
         });
 
@@ -118,7 +133,7 @@ router.post('/', async (req, res) => {
 
     doc.moveDown();
     doc.text(`Total HT : ${totalHT.toFixed(2)} €`);
-    doc.text(`TVA (20%) : ${tva.toFixed(2)} €`);
+    doc.text(`TVA (20%) : ${totalTVA.toFixed(2)} €`);
     doc.font('Helvetica-Bold').text(`Total TTC : ${totalTTC.toFixed(2)} €`, { align: 'right' });
 
     doc.moveDown(2);
