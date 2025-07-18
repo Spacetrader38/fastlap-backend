@@ -43,9 +43,9 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
         from: process.env.EMAIL_FROM || "contact@fastlap-engineering.fr",
         subject: "Votre remboursement a été effectué – FastLap Engineering",
         html: `
-          <p>Bonjour ${name.toLowerCase()},</p>
+          <p>Bonjour ${capitalize(prenom)} ${nom.toUpperCase()},</p>
           <p>Nous vous confirmons que votre commande a été remboursée.<br>
-          Le montant sera recrédité sur votre compte sous quelques jours.</p>
+          Le montant sera crédité sur votre compte sous quelques jours.</p>
 
           <p>Merci de votre compréhension.</p>
 
