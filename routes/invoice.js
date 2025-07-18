@@ -120,7 +120,7 @@ router.post('/', async (req, res) => {
 
     doc.moveDown();
     doc.text(`Total HT : ${totalHT.toFixed(3)} €`);
-    doc.text(`TVA (20%) : ${totalTVA.toFixed(2)} €`);
+    doc.text(`TVA (20%) : ${totalTVA.toFixed(3)} €`);
     doc.font('Helvetica-Bold').text(`Total TTC : ${totalTTC.toFixed(2)} €`, { align: 'right' });
 
     doc.moveDown(2);
