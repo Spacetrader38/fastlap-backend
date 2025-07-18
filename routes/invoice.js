@@ -20,7 +20,7 @@ router.post('/', async (req, res) => {
     // ✅ Calculs précis : HT en 3 décimales, TVA et TTC en 2
     const totalHTBrut = commande.reduce((acc, item) => acc + (item.price || 0), 0);
     const totalHT = parseFloat(totalHTBrut.toFixed(3)); // HT en 3 décimales
-    const totalTVA = parseFloat((totalHT * 0.2).toFixed(2)); // TVA en 2 décimales
+    const totalTVA = parseFloat((totalHT * 0.2).toFixed(3)); // TVA en 2 décimales
     const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2)); // TTC en 2 décimales
 
     const commandeTexte = commande.map(item => `${item.name} - ${item.price.toFixed(2)} €`).join('\n');
