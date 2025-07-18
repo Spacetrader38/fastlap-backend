@@ -17,24 +17,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Infos client ou commande manquantes' });
     }
 
-    // ✅ Calcul TTC par article avec arrondis pour éviter erreurs de somme
-    let totalHT = 0;
-    let totalTVA = 0;
-    let totalTTC = 0;
-
-    commande.forEach(item => {
-      const priceHT = item.price || 0;
-      const tvaArticle = parseFloat((priceHT * 0.2).toFixed(2));
-      const priceTTC = parseFloat((priceHT + tvaArticle).toFixed(2));
-
-      totalHT += priceHT;
-      totalTVA += tvaArticle;
-      totalTTC += priceTTC;
-    });
-
-    totalHT = parseFloat(totalHT.toFixed(2));
-    totalTVA = parseFloat(totalTVA.toFixed(2));
-    totalTTC = parseFloat(totalTTC.toFixed(2));
+    // ✅ Méthode globale : somme HT puis calcul TVA
+    const totalHT = parseFloat(commande.reduce((acc, item) => acc + (item.price || 0), 0).toFixed(2));
+    const totalTVA = parseFloat((totalHT * 0.20).toFixed(2));
+    const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2));
 
     const commandeTexte = commande.map(item => `${item.name} - ${item.price.toFixed(2)} €`).join('\n');
 
@@ -150,7 +136,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Lecture historique commandes
 router.get('/history', async (req, res) => {
   try {
     const orders = await Order.find().sort({ date: -1 });
@@ -161,7 +146,6 @@ router.get('/history', async (req, res) => {
   }
 });
 
-// 🔴 Réinitialisation de l'historique des commandes
 router.delete('/history/reset', async (req, res) => {
   try {
     await Order.deleteMany({});
