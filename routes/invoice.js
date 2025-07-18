@@ -104,7 +104,7 @@ router.post('/', async (req, res) => {
     doc.text(`${ville} - ${codePostal}`);
     if (telephone) doc.text(`Téléphone : ${telephone}`);
 
-    const dateStr = new Date().toLocaleDateString();
+    const dateStr = new Date().toLocaleDateString('fr-FR');
     doc.fontSize(12).text(`Date : ${dateStr}`, { align: 'right' });
 
     doc.moveDown();
