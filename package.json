@@ -4,22 +4,17 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@sendgrid/mail": "^8.1.5",
-    "cors": "^2.8.5",
-    "dotenv": "^17.1.0",
-    "express": "^5.1.0",
-    "mongoose": "^8.16.3",
-    "nodemailer": "^7.0.4",
-    "pdfkit": "^0.17.1",
-    "stripe": "^18.3.0"
+    "@sendgrid/mail": "8.1.5",
+    "cors": "2.8.5",
+    "dotenv": "17.1.0",
+    "express": "5.1.0",
+    "mongoose": "8.16.3",
+    "pdfkit": "0.17.1",
+    "stripe": "18.3.0"
   },
   "repository": {
     "type": "git",
