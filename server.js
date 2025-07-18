@@ -52,7 +52,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
           <p>— L'équipe FastLap Engineering</p>
 
           <p style="margin-top: 30px;">
-            <a href="https://fastlap-engineering.netlify.app/" 
+            <a href="https://www.fastlap-engineering.fr/" 
                style="background-color:#ffc107; color:#000; padding:10px 20px; text-decoration:none; border-radius:5px; font-weight:bold;">
                Retour à la boutique
             </a>
