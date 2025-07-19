@@ -17,6 +17,10 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Infos client ou commande manquantes' });
     }
 
+    commande.forEach(item => {
+      if (item.name === 'Porsche 991 Cup – Zandvoort') item.price = 0;
+    });
+
     // ✅ Calculs précis : HT en 3 décimales, TVA et TTC en 2
     const totalHTBrut = commande.reduce((acc, item) => acc + (item.price || 0), 0);
     const totalHT = parseFloat(totalHTBrut.toFixed(3)); // HT en 3 décimales
@@ -32,16 +36,26 @@ router.post('/', async (req, res) => {
       const pdfData = Buffer.concat(buffers);
 
       const setupAttachments = commande.map(item => {
-        const filePath = path.join(__dirname, '..', 'setups', `${item.name}.svm`);
-        if (fs.existsSync(filePath)) {
+        const baseName = item.name;
+        const jsonPath = path.join(__dirname, '..', 'setups', `${baseName}.json`);
+        const svmPath = path.join(__dirname, '..', 'setups', `${baseName}.svm`);
+
+        if (fs.existsSync(jsonPath)) {
           return {
-            content: fs.readFileSync(filePath).toString('base64'),
-            filename: `${item.name}.svm`,
+            content: fs.readFileSync(jsonPath).toString('base64'),
+            filename: `${baseName}.json`,
+            type: 'application/json',
+            disposition: 'attachment',
+          };
+        } else if (fs.existsSync(svmPath)) {
+          return {
+            content: fs.readFileSync(svmPath).toString('base64'),
+            filename: `${baseName}.svm`,
             type: 'application/octet-stream',
             disposition: 'attachment',
           };
         } else {
-          console.warn(`Setup manquant : ${filePath}`);
+          console.warn(`Setup manquant : ${jsonPath} ou ${svmPath}`);
           return null;
         }
       }).filter(Boolean);
