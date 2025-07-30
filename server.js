@@ -7,9 +7,12 @@ const Stripe = require("stripe");
 const sgMail = require("@sendgrid/mail");
 
 const app = express();
+
+// ✅ IMPORT DES ROUTES
 const paymentRoutes = require('./routes/payment');
 const clientInfoRoutes = require('./routes/clientInfo');
 const invoiceRoutes = require('./routes/invoice');
+const optimizeRoute = require('./routes/optimize'); // <-- AJOUTÉ
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -81,15 +84,18 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
 
 app.use(express.json()); // Après le webhook
 
+// ✅ ROUTES API
 app.use("/api/payment", paymentRoutes);
 app.use('/api/clientInfo', clientInfoRoutes);
 app.use('/api/invoice', invoiceRoutes);
+app.use('/api/optimize-setup', optimizeRoute); // <-- AJOUTÉ
 
-// ✅ Route GET pour monitoring (UptimeRobot, etc.)
+// ✅ ROUTE DE MONITORING
 app.get("/", (req, res) => {
   res.status(200).send("✅ FastLap backend is running");
 });
 
+// ✅ CONNEXION MONGODB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -97,6 +103,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log("✅ Connexion MongoDB réussie"))
 .catch(err => console.error("❌ Erreur MongoDB :", err));
 
+// ✅ STOCKAGE TEMPORAIRE FICHIERS SETUP
 let files = [
   {
     name: "Ferrari 499P – Le Mans",
@@ -133,5 +140,6 @@ app.delete("/files/:index", (req, res) => {
   res.json({ message: "File deleted" });
 });
 
+// ✅ LANCEMENT SERVEUR
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Backend démarré sur le port ${PORT}`));
