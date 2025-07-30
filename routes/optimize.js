@@ -22,8 +22,8 @@ router.post("/", async (req, res) => {
     duration,
   } = req.body;
 
-  // Vérification des champs obligatoires
-  if (!game || !car || !track || !weather || !tempTrack || !sessionType) {
+  // Vérification des champs obligatoires (tempTrack et behavior supprimés)
+  if (!game || !car || !track || !weather || !sessionType) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
@@ -32,7 +32,7 @@ router.post("/", async (req, res) => {
     let prompt = `
 Tu es un ingénieur en sport automobile expert en ${game}.
 Optimise le setup de la voiture ${car} sur le circuit ${track} pour une session de type "${sessionType}"${duration ? ` de ${duration} minutes` : ""}.
-Conditions météo : ${weather}, Température piste : ${tempTrack}°C${tempAir ? `, air : ${tempAir}°C` : ""}.
+Conditions météo : ${weather}${tempTrack ? `, Température piste : ${tempTrack}°C` : ""}${tempAir ? `, air : ${tempAir}°C` : ""}.
 `;
 
     if (behavior) {
@@ -41,6 +41,10 @@ Conditions météo : ${weather}, Température piste : ${tempTrack}°C${tempAir ?
 
     if (brakeBehavior) {
       prompt += `Il signale également un comportement "${brakeBehavior}" au freinage.\n`;
+    }
+
+    if (phase) {
+      prompt += `La phase du virage concernée est : ${phase}.\n`;
     }
 
     prompt += `Fournis des recommandations concrètes et techniques sur les réglages à ajuster (aérodynamique, suspension, pression, différentiel, etc), avec justifications claires.
@@ -65,7 +69,7 @@ Réponse concise, directe et sans bavardages inutiles.
       phase: phase || null,
       weather,
       tempAir: tempAir || null,
-      tempTrack,
+      tempTrack: tempTrack || null,
       sessionType,
       duration: duration || null,
       aiResponse: reply,
