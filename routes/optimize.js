@@ -19,22 +19,31 @@ router.post("/", async (req, res) => {
     tempAir,
     tempTrack,
     sessionType,
-    duration
+    duration,
   } = req.body;
 
   // Vérification des champs obligatoires
-  if (!game || !car || !track || !behavior || !brakeBehavior || !phase || !weather || !tempAir || !tempTrack || !sessionType || !duration) {
+  if (!game || !car || !track || !weather || !tempTrack || !sessionType) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
   try {
-    const prompt = `
+    // Construction dynamique du prompt
+    let prompt = `
 Tu es un ingénieur en sport automobile expert en ${game}.
-Optimise le setup de la voiture ${car} sur le circuit ${track} pour une session de type "${sessionType}" de ${duration} minutes.
-Conditions météo : ${weather}, Température air : ${tempAir}°C, piste : ${tempTrack}°C.
-Le pilote signale un comportement "${behavior}" en "${phase}" de virage, et un comportement "${brakeBehavior}" au freinage.
-Fournis des recommandations concrètes et techniques sur les réglages à ajuster (aérodynamique, suspension, pression, différentiel, etc), avec justifications claires.
+Optimise le setup de la voiture ${car} sur le circuit ${track} pour une session de type "${sessionType}"${duration ? ` de ${duration} minutes` : ""}.
+Conditions météo : ${weather}, Température piste : ${tempTrack}°C${tempAir ? `, air : ${tempAir}°C` : ""}.
+`;
 
+    if (behavior) {
+      prompt += `Le pilote souhaite un comportement "${behavior}" en virage.\n`;
+    }
+
+    if (brakeBehavior) {
+      prompt += `Il signale également un comportement "${brakeBehavior}" au freinage.\n`;
+    }
+
+    prompt += `Fournis des recommandations concrètes et techniques sur les réglages à ajuster (aérodynamique, suspension, pression, différentiel, etc), avec justifications claires.
 Réponse concise, directe et sans bavardages inutiles.
 `;
 
@@ -51,14 +60,14 @@ Réponse concise, directe et sans bavardages inutiles.
       game,
       car,
       track,
-      behavior,
-      brakeBehavior,
-      phase,
+      handling: behavior || null,
+      brakeBehavior: brakeBehavior || null,
+      phase: phase || null,
       weather,
-      tempAir,
+      tempAir: tempAir || null,
       tempTrack,
       sessionType,
-      duration,
+      duration: duration || null,
       aiResponse: reply,
     });
 
