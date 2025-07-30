@@ -12,7 +12,7 @@ router.post("/", async (req, res) => {
     game,
     car,
     track,
-    handling,
+    behavior,
     brakeBehavior,
     phase,
     weather,
@@ -23,7 +23,7 @@ router.post("/", async (req, res) => {
   } = req.body;
 
   // Vérification des champs obligatoires
-  if (!game || !car || !track || !handling || !brakeBehavior || !phase || !weather || !tempAir || !tempTrack || !sessionType || !duration) {
+  if (!game || !car || !track || !behavior || !brakeBehavior || !phase || !weather || !tempAir || !tempTrack || !sessionType || !duration) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
@@ -32,7 +32,7 @@ router.post("/", async (req, res) => {
 Tu es un ingénieur en sport automobile expert en ${game}.
 Optimise le setup de la voiture ${car} sur le circuit ${track} pour une session de type "${sessionType}" de ${duration} minutes.
 Conditions météo : ${weather}, Température air : ${tempAir}°C, piste : ${tempTrack}°C.
-Le pilote signale un comportement "${handling}" en "${phase}" de virage, et un comportement "${brakeBehavior}" au freinage.
+Le pilote signale un comportement "${behavior}" en "${phase}" de virage, et un comportement "${brakeBehavior}" au freinage.
 Fournis des recommandations concrètes et techniques sur les réglages à ajuster (aérodynamique, suspension, pression, différentiel, etc), avec justifications claires.
 
 Réponse concise, directe et sans bavardages inutiles.
@@ -51,7 +51,7 @@ Réponse concise, directe et sans bavardages inutiles.
       game,
       car,
       track,
-      handling,
+      behavior,
       brakeBehavior,
       phase,
       weather,
