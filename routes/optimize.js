@@ -2,16 +2,16 @@ const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
 const OptimizeRequest = require("../models/OptimizeRequest");
-const Client = require("../models/Client"); // <- modèle client
+const Client = require("../models/ClientInfo");
 const fs = require("fs");
 const path = require("path");
 const sgMail = require("@sendgrid/mail");
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // <- clé SendGrid
 
 router.post("/", async (req, res) => {
   const {
@@ -52,44 +52,23 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
+    // Création du dossier setupsIA s'il n'existe pas
     const folderPath = path.join(__dirname, "../setupsIA");
     if (!fs.existsSync(folderPath)) {
       fs.mkdirSync(folderPath);
     }
 
+    // Génération du nom de fichier
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
     const filename = `${safeCar}_${safeTrack}_${timestamp}${format}`;
     const filePath = path.join(folderPath, filename);
 
+    // Écriture du fichier setup
     fs.writeFileSync(filePath, reply, "utf-8");
 
-    // 📩 Récupération du dernier client
-    const lastClient = await Client.findOne().sort({ createdAt: -1 });
-
-    if (lastClient?.email) {
-      const msg = {
-        to: lastClient.email,
-        from: "contact@fastlap-engineering.fr",
-        subject: "Votre setup personnalisé est prêt !",
-        text: `Bonjour ${lastClient.prenom},\n\nVous trouverez ci-joint le fichier setup généré pour votre demande sur ${car} – ${track}.\n\nMerci pour votre confiance !`,
-        attachments: [
-          {
-            content: Buffer.from(reply).toString("base64"),
-            filename,
-            type: "text/plain",
-            disposition: "attachment",
-          },
-        ],
-      };
-
-      await sgMail.send(msg);
-      console.log(`✅ Setup envoyé à ${lastClient.email}`);
-    } else {
-      console.warn("❌ Aucun client trouvé pour l'envoi du mail.");
-    }
-
+    // Sauvegarde MongoDB
     await OptimizeRequest.create({
       game,
       car,
@@ -104,6 +83,31 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
       duration: duration || null,
       aiResponse: reply,
     });
+
+    // Envoi du fichier par mail au dernier client inscrit
+    const client = await Client.findOne().sort({ _id: -1 });
+
+    if (client) {
+      const emailData = {
+        to: client.email,
+        from: "contact@fastlap-engineering.fr",
+        subject: `Votre setup IA pour ${car} – ${track}`,
+        text: `Bonjour ${client.prenom},\n\nVeuillez trouver ci-joint votre setup personnalisé généré par notre IA.\n\nSportivement,\nL'équipe FastLap Engineering`,
+        attachments: [
+          {
+            content: fs.readFileSync(filePath).toString("base64"),
+            filename: filename,
+            type: "application/octet-stream",
+            disposition: "attachment",
+          },
+        ],
+      };
+
+      await sgMail.send(emailData);
+      console.log("📩 Mail setup IA envoyé à", client.email);
+    } else {
+      console.error("❌ Aucun client trouvé dans la base pour l’envoi du mail IA.");
+    }
 
     res.json({ reply, filename });
   } catch (err) {
