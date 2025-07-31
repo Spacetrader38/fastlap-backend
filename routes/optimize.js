@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
   try {
     const format = game === "rFactor2" ? ".svm" : ".json";
 
-    const prompt = `Optimise un setup pour ${game}.
+    const userPrompt = `Optimise un setup pour ${game}.
 Voiture : ${car}
 Circuit : ${track}
 Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
@@ -45,9 +45,19 @@ Génère un fichier complet de setup au format ${format}, prêt à être utilis�
 Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fichier.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-1106-preview",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.6,
+      model: "gpt-4-1106-preview", // ou gpt-4o selon ton choix
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es un ingénieur en sport automobile spécialisé dans les jeux de simulation comme Assetto Corsa Competizione et rFactor 2. Tu génères uniquement des fichiers de setup au format .json ou .svm, sans aucun texte ou commentaire.",
+        },
+        {
+          role: "user",
+          content: userPrompt,
+        },
+      ],
+      temperature: 0.3,
     });
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
@@ -58,17 +68,14 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
       fs.mkdirSync(folderPath);
     }
 
-    // Génération du nom de fichier
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
     const filename = `${safeCar}_${safeTrack}_${timestamp}${format}`;
     const filePath = path.join(folderPath, filename);
 
-    // Écriture du fichier setup
     fs.writeFileSync(filePath, reply, "utf-8");
 
-    // Sauvegarde MongoDB
     await OptimizeRequest.create({
       game,
       car,
@@ -84,7 +91,6 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
       aiResponse: reply,
     });
 
-    // Envoi du fichier par mail au dernier client inscrit
     const client = await Client.findOne().sort({ _id: -1 });
 
     if (client) {
