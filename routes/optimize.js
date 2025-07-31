@@ -2,12 +2,16 @@ const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
 const OptimizeRequest = require("../models/OptimizeRequest");
+const Client = require("../models/Client"); // <- modèle client
 const fs = require("fs");
 const path = require("path");
+const sgMail = require("@sendgrid/mail");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // <- clé SendGrid
 
 router.post("/", async (req, res) => {
   const {
@@ -48,23 +52,44 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    // ✅ Création du dossier setupsIA s'il n'existe pas
     const folderPath = path.join(__dirname, "../setupsIA");
     if (!fs.existsSync(folderPath)) {
       fs.mkdirSync(folderPath);
     }
 
-    // ✅ Génération du nom de fichier unique
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
     const filename = `${safeCar}_${safeTrack}_${timestamp}${format}`;
     const filePath = path.join(folderPath, filename);
 
-    // ✅ Écriture du fichier setup
     fs.writeFileSync(filePath, reply, "utf-8");
 
-    // ✅ Sauvegarde MongoDB
+    // 📩 Récupération du dernier client
+    const lastClient = await Client.findOne().sort({ createdAt: -1 });
+
+    if (lastClient?.email) {
+      const msg = {
+        to: lastClient.email,
+        from: "contact@fastlap-engineering.fr",
+        subject: "Votre setup personnalisé est prêt !",
+        text: `Bonjour ${lastClient.prenom},\n\nVous trouverez ci-joint le fichier setup généré pour votre demande sur ${car} – ${track}.\n\nMerci pour votre confiance !`,
+        attachments: [
+          {
+            content: Buffer.from(reply).toString("base64"),
+            filename,
+            type: "text/plain",
+            disposition: "attachment",
+          },
+        ],
+      };
+
+      await sgMail.send(msg);
+      console.log(`✅ Setup envoyé à ${lastClient.email}`);
+    } else {
+      console.warn("❌ Aucun client trouvé pour l'envoi du mail.");
+    }
+
     await OptimizeRequest.create({
       game,
       car,
@@ -80,9 +105,9 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
       aiResponse: reply,
     });
 
-    res.json({ reply, filename }); // facultatif : tu peux aussi retourner le nom du fichier
+    res.json({ reply, filename });
   } catch (err) {
-    console.error("Erreur OpenAI ou écriture fichier :", err);
+    console.error("Erreur OpenAI, Mongo ou SendGrid :", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
