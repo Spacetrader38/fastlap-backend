@@ -41,16 +41,17 @@ Circuit : ${track}
 Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
 Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}${behavior ? `, Comportement : ${behavior}` : ""}${brakeBehavior ? `, Freinage : ${brakeBehavior}` : ""}${phase ? `, Phase : ${phase}` : ""}
 
-Génère un fichier complet de setup au format ${format}, prêt à être utilisé par le jeu ${game}.
-Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fichier.`;
+Ta tâche est de générer un fichier de setup complet au format ${format}, prêt à être utilisé directement dans ${game}.
+Ne fournis aucun commentaire ni explication **si** tu génères le fichier.  
+En revanche, si tu ne peux pas le générer (limite technique ou politique de contenu), explique brièvement pourquoi.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-1106-preview", // ou gpt-4o selon ton choix
+      model: "gpt-4-1106-preview",
       messages: [
         {
           role: "system",
           content:
-            "Tu es un ingénieur en sport automobile spécialisé dans les jeux de simulation comme Assetto Corsa Competizione et rFactor 2. Tu génères uniquement des fichiers de setup au format .json ou .svm, sans aucun texte ou commentaire.",
+            "Tu es un ingénieur en sport automobile expert en jeux de simulation comme Assetto Corsa Competizione et rFactor 2. Si tu peux, tu dois générer un fichier de setup au format .json ou .svm. Si tu ne peux pas, explique clairement pourquoi, sans détour ni redirection vers des forums.",
         },
         {
           role: "user",
@@ -62,7 +63,6 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    // Création du dossier setupsIA s'il n'existe pas
     const folderPath = path.join(__dirname, "../setupsIA");
     if (!fs.existsSync(folderPath)) {
       fs.mkdirSync(folderPath);
