@@ -45,7 +45,7 @@ Génère un fichier complet de setup au format ${format}, prêt à être utilis�
 Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fichier.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-1106-preview",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.6,
     });
