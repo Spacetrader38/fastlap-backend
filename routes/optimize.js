@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
+const tiktoken = require("tiktoken");
 const OptimizeRequest = require("../models/OptimizeRequest");
 
 const openai = new OpenAI({
@@ -22,13 +23,12 @@ router.post("/", async (req, res) => {
     duration,
   } = req.body;
 
-  // Vérification des champs obligatoires (tempTrack et behavior supprimés)
   if (!game || !car || !track || !weather || !sessionType) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
   try {
-    // Nouveau prompt optimisé
+    // Prompt optimisé
     let prompt = `Optimise un setup pour ${game}.
 Voiture : ${car}
 Circuit : ${track}
@@ -37,6 +37,15 @@ Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? 
 
 Donne uniquement les réglages à modifier (aéro, pression, suspension, différentiel...) dans un format clair et exploitable. Ne commente pas si ce n'est pas nécessaire.`;
 
+    // 🔢 Calcul des tokens avec tiktoken
+    const encoder = tiktoken.encoding_for_model("gpt-4");
+    const tokens = encoder.encode(prompt);
+    const tokenCount = tokens.length;
+    encoder.free(); // libère la mémoire
+
+    console.log(`🔢 Tokens utilisés pour le prompt : ${tokenCount}`);
+
+    // Requête à OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
@@ -45,7 +54,7 @@ Donne uniquement les réglages à modifier (aéro, pression, suspension, différ
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    // Sauvegarde MongoDB
+    // 💾 Sauvegarde MongoDB
     await OptimizeRequest.create({
       game,
       car,
@@ -59,6 +68,7 @@ Donne uniquement les réglages à modifier (aéro, pression, suspension, différ
       sessionType,
       duration: duration || null,
       aiResponse: reply,
+      tokenUsage: tokenCount,
     });
 
     res.json({ reply });
