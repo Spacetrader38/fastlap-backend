@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
-const tiktoken = require("tiktoken");
 const OptimizeRequest = require("../models/OptimizeRequest");
 
 const openai = new OpenAI({
@@ -28,24 +27,17 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    // Prompt optimisé
-    let prompt = `Optimise un setup pour ${game}.
+    const format = game === "rFactor2" ? ".svm" : ".json";
+
+    const prompt = `Optimise un setup pour ${game}.
 Voiture : ${car}
 Circuit : ${track}
 Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
 Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}${behavior ? `, Comportement : ${behavior}` : ""}${brakeBehavior ? `, Freinage : ${brakeBehavior}` : ""}${phase ? `, Phase : ${phase}` : ""}
 
-Donne uniquement les réglages à modifier (aéro, pression, suspension, différentiel...) dans un format clair et exploitable. Ne commente pas si ce n'est pas nécessaire.`;
+Génère un fichier complet de setup au format ${format}, prêt à être utilisé par le jeu ${game}.
+Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fichier.`;
 
-    // 🔢 Calcul des tokens avec tiktoken
-    const encoder = tiktoken.encoding_for_model("gpt-4");
-    const tokens = encoder.encode(prompt);
-    const tokenCount = tokens.length;
-    encoder.free(); // libère la mémoire
-
-    console.log(`🔢 Tokens utilisés pour le prompt : ${tokenCount}`);
-
-    // Requête à OpenAI
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
@@ -54,7 +46,6 @@ Donne uniquement les réglages à modifier (aéro, pression, suspension, différ
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    // 💾 Sauvegarde MongoDB
     await OptimizeRequest.create({
       game,
       car,
@@ -68,7 +59,6 @@ Donne uniquement les réglages à modifier (aéro, pression, suspension, différ
       sessionType,
       duration: duration || null,
       aiResponse: reply,
-      tokenUsage: tokenCount,
     });
 
     res.json({ reply });
