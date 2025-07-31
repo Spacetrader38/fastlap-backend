@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const OpenAI = require("openai");
 const OptimizeRequest = require("../models/OptimizeRequest");
+const fs = require("fs");
+const path = require("path");
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -46,6 +48,23 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
+    // ✅ Création du dossier setupsIA s'il n'existe pas
+    const folderPath = path.join(__dirname, "../setupsIA");
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath);
+    }
+
+    // ✅ Génération du nom de fichier unique
+    const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
+    const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
+    const timestamp = Date.now();
+    const filename = `${safeCar}_${safeTrack}_${timestamp}${format}`;
+    const filePath = path.join(folderPath, filename);
+
+    // ✅ Écriture du fichier setup
+    fs.writeFileSync(filePath, reply, "utf-8");
+
+    // ✅ Sauvegarde MongoDB
     await OptimizeRequest.create({
       game,
       car,
@@ -61,9 +80,9 @@ Ne fournis aucun commentaire ni explication : uniquement le contenu brut du fich
       aiResponse: reply,
     });
 
-    res.json({ reply });
+    res.json({ reply, filename }); // facultatif : tu peux aussi retourner le nom du fichier
   } catch (err) {
-    console.error("Erreur OpenAI :", err);
+    console.error("Erreur OpenAI ou écriture fichier :", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
