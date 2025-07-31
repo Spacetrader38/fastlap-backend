@@ -9,7 +9,7 @@ const OptimizeRequestSchema = new mongoose.Schema({
   phase: { type: String, required: false },           // Phase du virage concernée
   weather: { type: String, required: true },         // Conditions météo
   tempAir: { type: Number, required: false },         // Température air (°C)
-  tempTrack: { type: Number, required: true },       // Température piste (°C)
+  tempTrack: { type: Number, required: false },       // Température piste (°C)
   sessionType: { type: String, required: true },     // Type de session (qualif/course)
   duration: { type: Number, required: false },        // Durée de session en minutes
   aiResponse: { type: String, required: true },      // Réponse IA
