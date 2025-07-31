@@ -28,28 +28,14 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    // Construction dynamique du prompt
-    let prompt = `
-Tu es un ingénieur en sport automobile expert en ${game}.
-Optimise le setup de la voiture ${car} sur le circuit ${track} pour une session de type "${sessionType}"${duration ? ` de ${duration} minutes` : ""}.
-Conditions météo : ${weather}${tempTrack ? `, Température piste : ${tempTrack}°C` : ""}${tempAir ? `, air : ${tempAir}°C` : ""}.
-`;
+    // Nouveau prompt optimisé
+    let prompt = `Optimise un setup pour ${game}.
+Voiture : ${car}
+Circuit : ${track}
+Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
+Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}${behavior ? `, Comportement : ${behavior}` : ""}${brakeBehavior ? `, Freinage : ${brakeBehavior}` : ""}${phase ? `, Phase : ${phase}` : ""}
 
-    if (behavior) {
-      prompt += `Le pilote souhaite un comportement "${behavior}" en virage.\n`;
-    }
-
-    if (brakeBehavior) {
-      prompt += `Il signale également un comportement "${brakeBehavior}" au freinage.\n`;
-    }
-
-    if (phase) {
-      prompt += `La phase du virage concernée est : ${phase}.\n`;
-    }
-
-    prompt += `Fournis des recommandations concrètes et techniques sur les réglages à ajuster (aérodynamique, suspension, pression, différentiel, etc), avec justifications claires.
-Réponse concise, directe et sans bavardages inutiles.
-`;
+Donne uniquement les réglages à modifier (aéro, pression, suspension, différentiel...) dans un format clair et exploitable. Ne commente pas si ce n'est pas nécessaire.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
