@@ -28,9 +28,10 @@ router.post("/", async (req, res) => {
     sessionType,
     duration,
     notes,
+    email, // ✅ récupéré dans le body
   } = req.body;
 
-  if (!game || !car || !track || !category || !weather || !sessionType) {
+  if (!game || !car || !track || !category || !weather || !sessionType || !email) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
@@ -127,7 +128,8 @@ Section : <autre_section>
       aiResponse: reply,
     });
 
-    const client = await Client.findOne().sort({ _id: -1 });
+    // ✅ Recherche du client par son email (plus fiable que .sort)
+    const client = await Client.findOne({ email });
 
     if (client) {
       const emailData = {
@@ -148,7 +150,7 @@ Section : <autre_section>
       await sgMail.send(emailData);
       console.log("📩 Mail modifications IA envoyé à", client.email);
     } else {
-      console.error("❌ Aucun client trouvé dans la base pour l’envoi du mail IA.");
+      console.error("❌ Aucun client trouvé avec l'email :", email);
     }
 
     res.json({ reply, filename: modificationsFile });
