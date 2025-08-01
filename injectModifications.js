@@ -1,58 +1,60 @@
 const fs = require("fs");
 const path = require("path");
 
-// Chemins des fichiers (à adapter selon ton dossier réel)
-const baseSetupPath = path.join(__dirname, "setupsIA/Zandvoort/GT3/setup_base_Aston Martin.txt");
-const modificationsPath = path.join(__dirname, "modifications_ia.txt");
-const outputPath = path.join(__dirname, "setupsIA/Zandvoort/GT3/setup_modified_Aston Martin.txt");
+function injectModifications(basePath, modifsPath, outputPath) {
+  if (!fs.existsSync(basePath) || !fs.existsSync(modifsPath)) {
+    throw new Error("Fichier de base ou de modifications manquant.");
+  }
 
-// Charger le fichier de base
-let lines = fs.readFileSync(baseSetupPath, "utf-8").split("\n");
+  const baseLines = fs.readFileSync(basePath, "utf-8").split("\n");
+  const rawModifs = fs.readFileSync(modifsPath, "utf-8");
 
-// Charger les modifications IA
-const rawModifs = fs.readFileSync(modificationsPath, "utf-8");
+  let currentSection = "";
+  const modifications = {};
 
-// Parser les modifications IA
-let currentSection = "";
-let modifications = {};
+  rawModifs.split("\n").forEach(line => {
+    if (line.startsWith("Section")) {
+      currentSection = line.split(":")[1].trim();
+      modifications[currentSection] = {};
+    } else if (line.startsWith("-")) {
+      const [key, value] = line.substring(2).split(":").map(s => s.trim());
+      try {
+        modifications[currentSection][key] = JSON.parse(value);
+      } catch {
+        modifications[currentSection][key] = value;
+      }
+    }
+  });
 
-rawModifs.split("\n").forEach(line => {
-  if (line.startsWith("Section")) {
-    currentSection = line.split(":")[1].trim();
-    modifications[currentSection] = {};
-  } else if (line.startsWith("-")) {
-    const [key, value] = line.substring(2).split(":").map(s => s.trim());
-    try {
-      modifications[currentSection][key] = JSON.parse(value);
-    } catch (err) {
-      modifications[currentSection][key] = value; // fallback si ce n’est pas un array
+  const sectionRegex = /^\[(.+)]$/;
+  let currentSectionName = "";
+  const outputLines = [];
+
+  for (let line of baseLines) {
+    const match = line.match(sectionRegex);
+    if (match) {
+      currentSectionName = match[1];
+      outputLines.push(line);
+      continue;
+    }
+
+    const [key, val] = line.split("=");
+    if (
+      key &&
+      modifications[currentSectionName] &&
+      modifications[currentSectionName].hasOwnProperty(key.trim())
+    ) {
+      const newVal = modifications[currentSectionName][key.trim()];
+      outputLines.push(
+        `${key.trim()} = ${Array.isArray(newVal) ? `[ ${newVal.join(", ")} ]` : newVal}`
+      );
+    } else {
+      outputLines.push(line);
     }
   }
-});
 
-// Injecter les modifications dans le fichier de base
-const sectionRegex = /^\[(.+)]$/;
-let currentSectionName = "";
-let outputLines = [];
-
-for (let line of lines) {
-  const sectionMatch = line.match(sectionRegex);
-  if (sectionMatch) {
-    currentSectionName = sectionMatch[1];
-    outputLines.push(line);
-    continue;
-  }
-
-  const keyMatch = line.split("=");
-  if (keyMatch.length === 2 && modifications[currentSectionName]?.hasOwnProperty(keyMatch[0].trim())) {
-    const newVal = modifications[currentSectionName][keyMatch[0].trim()];
-    outputLines.push(`${keyMatch[0].trim()} = ${Array.isArray(newVal) ? `[ ${newVal.join(", ")} ]` : newVal}`);
-  } else {
-    outputLines.push(line);
-  }
+  fs.writeFileSync(outputPath, outputLines.join("\n"), "utf-8");
+  return outputPath;
 }
 
-// Sauvegarder le fichier modifié
-fs.writeFileSync(outputPath, outputLines.join("\n"), "utf-8");
-
-console.log("✅ Modifications injectées avec succès dans :", outputPath);
+module.exports = injectModifications;
