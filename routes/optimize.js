@@ -112,17 +112,23 @@ Section : <autre_section>
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    // ✅ Génération nom de fichier final (.json ou .svm)
+    // ✅ Fichiers noms sécurisés
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
     const extension = game === "Assetto Corsa Competizione" ? "json" : "svm";
+
+    // ✅ Chemins fichiers
+    const modificationsFile = `modifications_${safeCar}_${safeTrack}_${timestamp}.txt`;
+    const modificationsPath = path.join(__dirname, "../setupsIA", modificationsFile);
     const finalFileName = `setup_final_${safeCar}_${safeTrack}_${timestamp}.${extension}`;
     const finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
 
-    // ✅ Injection des modifications dans le setup de base
-    const modifiedContent = injectModifications(baseSetup, reply);
-    fs.writeFileSync(finalFilePath, modifiedContent, "utf-8");
+    // ✅ On sauvegarde la réponse de l’IA dans un .txt
+    fs.writeFileSync(modificationsPath, reply, "utf-8");
+
+    // ✅ On injecte les modifs depuis les fichiers
+    injectModifications(setupBasePath, modificationsPath, finalFilePath);
 
     // ✅ Enregistrement Mongo
     await OptimizeRequest.create({
@@ -143,7 +149,6 @@ Section : <autre_section>
       aiResponse: reply,
     });
 
-    // ✅ Récupération client
     const client = await Client.findOne({ email });
 
     if (client) {
