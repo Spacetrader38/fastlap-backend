@@ -49,27 +49,41 @@ router.post("/", async (req, res) => {
 
     const baseSetup = fs.readFileSync(setupBasePath, "utf-8");
 
-    const userPrompt = `Tu dois modifier le fichier de setup ci-dessous pour le jeu ${game}.
+    const userPrompt = `Tu es un ingénieur en sport automobile expert des setups dans ${game}.
 
-Voiture : ${car}
-Circuit : ${track}
-Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
-Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}
-${behavior ? `Comportement : ${behavior}` : ""}
-${brakeBehavior ? `Freinage : ${brakeBehavior}` : ""}
-${phase ? `Phase : ${phase}` : ""}
-${notes ? `Remarques du client : ${notes}` : ""}
+Tu dois analyser le fichier de setup de base ci-dessous (au format texte brut) et identifier **les paramètres exacts à modifier**, section par section, en fonction des contraintes suivantes.
 
-Voici le fichier de setup de base au format texte :
+---
 
-\`\`\`
+📄 Fichier de setup de base :
+
 ${baseSetup}
-\`\`\`
 
-Merci de modifier ce fichier uniquement en fonction des contraintes indiquées ci-dessus.  
-Renvoie-moi **uniquement le contenu du nouveau fichier .txt modifié**, sans le réencapsuler dans du markdown (\`\`\`) ni ajouter de texte explicatif **si la génération réussit**.
+---
 
-❗ En revanche, si tu ne peux pas le faire (limite technique ou politique de contenu), **explique clairement pourquoi.**`;
+🎯 Contraintes à appliquer :
+- Comportement : ${behavior || "non précisé"}
+- Phase du virage : ${phase || "non précisée"}
+- Freinage : ${brakeBehavior || "non précisé"}
+- Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
+- Conditions météo : ${weather}${tempTrack ? `, piste ${tempTrack}°C` : ""}${tempAir ? `, air ${tempAir}°C` : ""}
+${notes ? `- Remarques personnalisées : ${notes}` : ""}
+
+---
+
+📦 Format de réponse obligatoire :
+
+Section : <nom_de_section>
+- <paramètre> : <valeur>
+- <paramètre> : <valeur>
+
+Section : <autre_section>
+- etc.
+
+⚠️ Ne renvoie que les paramètres à modifier.
+⚠️ Aucune explication, aucun commentaire, aucun texte introductif, aucun markdown.
+
+❌ Si tu ne peux pas traiter cette demande pour une raison précise (limite technique, sécurité, etc.), indique uniquement : "Refus de traitement : <motif>". Tout autre comportement est interdit.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
@@ -77,7 +91,7 @@ Renvoie-moi **uniquement le contenu du nouveau fichier .txt modifié**, sans le 
         {
           role: "system",
           content:
-            "Tu es un ingénieur en sport automobile expert en setups pour Assetto Corsa Competizione et rFactor 2. Tu dois modifier un fichier texte de setup fourni, selon des contraintes, et renvoyer uniquement la version modifiée. Si tu ne peux pas, explique clairement pourquoi.",
+            "Tu es un ingénieur en sport automobile expert en setups pour Assetto Corsa Competizione et rFactor 2. Tu dois analyser un fichier texte de setup fourni et renvoyer uniquement les sections à modifier. Aucun commentaire. Si refus, indiquer clairement le motif.",
         },
         {
           role: "user",
@@ -92,10 +106,10 @@ Renvoie-moi **uniquement le contenu du nouveau fichier .txt modifié**, sans le 
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
-    const filename = `${safeCar}_${safeTrack}_${timestamp}.txt`;
-    const outputPath = path.join(__dirname, "../setupsIA", filename);
+    const modificationsFile = `modifications_${safeCar}_${safeTrack}_${timestamp}.txt`;
+    const modificationsPath = path.join(__dirname, "../setupsIA", modificationsFile);
 
-    fs.writeFileSync(outputPath, reply, "utf-8");
+    fs.writeFileSync(modificationsPath, reply, "utf-8");
 
     await OptimizeRequest.create({
       game,
@@ -120,24 +134,24 @@ Renvoie-moi **uniquement le contenu du nouveau fichier .txt modifié**, sans le 
         to: client.email,
         from: "contact@fastlap-engineering.fr",
         subject: `Votre setup IA pour ${car} – ${track}`,
-        text: `Bonjour ${client.prenom},\n\nVeuillez trouver ci-joint votre setup personnalisé généré par notre IA.\n\nSportivement,\nL'équipe FastLap Engineering`,
+        text: `Bonjour ${client.prenom},\n\nVeuillez trouver ci-joint les modifications recommandées par notre IA pour votre setup personnalisé.\n\nSportivement,\nL'équipe FastLap Engineering`,
         attachments: [
           {
-            content: fs.readFileSync(outputPath).toString("base64"),
-            filename: filename,
-            type: "application/octet-stream",
+            content: fs.readFileSync(modificationsPath).toString("base64"),
+            filename: modificationsFile,
+            type: "text/plain",
             disposition: "attachment",
           },
         ],
       };
 
       await sgMail.send(emailData);
-      console.log("📩 Mail setup IA envoyé à", client.email);
+      console.log("📩 Mail modifications IA envoyé à", client.email);
     } else {
       console.error("❌ Aucun client trouvé dans la base pour l’envoi du mail IA.");
     }
 
-    res.json({ reply, filename });
+    res.json({ reply, filename: modificationsFile });
   } catch (err) {
     console.error("Erreur OpenAI, Mongo ou SendGrid :", err);
     res.status(500).json({ error: "Erreur serveur" });
