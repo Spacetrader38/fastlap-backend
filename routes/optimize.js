@@ -34,33 +34,37 @@ router.post("/", async (req, res) => {
   }
 
   try {
-    const format = game === "rFactor2" ? ".svm" : ".json";
     const setupBasePath = path.join(
       __dirname,
       "../setupsIA",
       track,
       category,
-      `setup_base_${car}${format}`
+      `setup_base_${car}.txt`
     );
 
     if (!fs.existsSync(setupBasePath)) {
       return res.status(404).json({ error: "Setup de base introuvable pour cette voiture et circuit" });
     }
 
-    const baseSetupContent = fs.readFileSync(setupBasePath, "utf-8");
+    const baseSetup = fs.readFileSync(setupBasePath, "utf-8");
 
-    const userPrompt = `Voici un fichier de setup de base pour ${game} :
+    const userPrompt = `Tu dois modifier le fichier de setup ci-dessous pour le jeu ${game}.
 
-${baseSetupContent}
+Voiture : ${car}
+Circuit : ${track}
+Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
+Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}${behavior ? `, Comportement : ${behavior}` : ""}${brakeBehavior ? `, Freinage : ${brakeBehavior}` : ""}${phase ? `, Phase : ${phase}` : ""}
 
-Merci de modifier ce fichier selon les contraintes suivantes :
-- Comportement : ${behavior || "non précisé"}
-- Phase du virage : ${phase || "non précisée"}
-- Freinage : ${brakeBehavior || "non précisé"}
-- Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
-- Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}
+Voici le fichier de setup de base au format texte :
 
-Renvoie uniquement le fichier modifié, sans aucun commentaire ni explication.`;
+\`\`\`
+${baseSetup}
+\`\`\`
+
+Merci de modifier ce fichier uniquement en fonction des contraintes indiquées ci-dessus.  
+Renvoie-moi **uniquement le contenu du nouveau fichier .txt modifié**, sans le réencapsuler dans du markdown (\`\`\`) ni ajouter de texte explicatif **si la génération réussit**.
+
+❗ En revanche, si tu ne peux pas le faire (limite technique ou politique de contenu), **explique clairement pourquoi.**`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
@@ -68,7 +72,7 @@ Renvoie uniquement le fichier modifié, sans aucun commentaire ni explication.`;
         {
           role: "system",
           content:
-            "Tu es un ingénieur en sport automobile expert en jeux de simulation comme Assetto Corsa Competizione et rFactor 2. Tu dois modifier un fichier de setup existant et retourner uniquement sa version modifiée au même format. Si tu ne peux pas, explique pourquoi.",
+            "Tu es un ingénieur en sport automobile expert en setups pour Assetto Corsa Competizione et rFactor 2. Tu dois modifier un fichier texte de setup fourni, selon des contraintes, et renvoyer uniquement la version modifiée. Si tu ne peux pas, explique clairement pourquoi.",
         },
         {
           role: "user",
@@ -80,16 +84,14 @@ Renvoie uniquement le fichier modifié, sans aucun commentaire ni explication.`;
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    // Sauvegarde du fichier modifié
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
-    const filename = `${safeCar}_${safeTrack}_${timestamp}${format}`;
+    const filename = `${safeCar}_${safeTrack}_${timestamp}.txt`;
     const outputPath = path.join(__dirname, "../setupsIA", filename);
 
     fs.writeFileSync(outputPath, reply, "utf-8");
 
-    // Enregistrement dans MongoDB
     await OptimizeRequest.create({
       game,
       car,
