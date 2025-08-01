@@ -107,7 +107,8 @@ Section : <autre_section>
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
-    const modificationsFile = `modifications_${safeCar}_${safeTrack}_${timestamp}.txt`;
+    const extension = game === "Assetto Corsa Competizione" ? "json" : "svm"; // ✅
+    const modificationsFile = `modifications_${safeCar}_${safeTrack}_${timestamp}.${extension}`; // ✅
     const modificationsPath = path.join(__dirname, "../setupsIA", modificationsFile);
 
     fs.writeFileSync(modificationsPath, reply, "utf-8");
@@ -128,8 +129,7 @@ Section : <autre_section>
       aiResponse: reply,
     });
 
-    // ✅ Recherche du client par son email (plus fiable que .sort)
-    const client = await Client.findOne({ email });
+    const client = await Client.findOne({ email }); // ✅
 
     if (client) {
       const emailData = {
@@ -141,7 +141,7 @@ Section : <autre_section>
           {
             content: fs.readFileSync(modificationsPath).toString("base64"),
             filename: modificationsFile,
-            type: "text/plain",
+            type: "application/octet-stream",
             disposition: "attachment",
           },
         ],
