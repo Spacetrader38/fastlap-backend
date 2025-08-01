@@ -1,198 +1,147 @@
-import React, { useState } from "react";
+const express = require("express");
+const router = express.Router();
+const OpenAI = require("openai");
+const OptimizeRequest = require("../models/OptimizeRequest");
+const Client = require("../models/Client");
+const fs = require("fs");
+const path = require("path");
+const sgMail = require("@sendgrid/mail");
 
-const gameData = {
-  "rFactor2": {
-    cars: [/* ... même contenu qu’avant ... */],
-    tracks: [/* ... même contenu qu’avant ... */]
-  },
-  "Assetto Corsa Competizione": {
-    cars: [
-      "Aston Martin", "Audi R8 LMS Evo", "BMW M6 GT3", "Bentley Continental",
-      "Ferrari 488 GT3 Evo", "Ferrari 488 GT3", "Honda NSX GT3 Evo",
-      "Lamborghini Hura Evo", "Lamborghini Huracan", "Lexus GT3",
-      "Mc Laren 720S GT3", "Mercedes AMG GT3 2020", "Mercedes AMG GT3",
-      "Nissan GTR GT3", "Porsche 991 GT3 R", "Porsche II 991 GT3 R"
-    ],
-    tracks: [ "Zandvoort" ]
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+router.post("/", async (req, res) => {
+  const {
+    game,
+    car,
+    track,
+    category,
+    behavior,
+    brakeBehavior,
+    phase,
+    weather,
+    tempAir,
+    tempTrack,
+    sessionType,
+    duration,
+    notes,
+  } = req.body;
+
+  if (!game || !car || !track || !category || !weather || !sessionType) {
+    return res.status(400).json({ error: "Champs manquants" });
   }
-};
 
-const OptimizeSetup = () => {
-  const [game, setGame] = useState("");
-  const [car, setCar] = useState("");
-  const [track, setTrack] = useState("");
-  const [behavior, setBehavior] = useState("");
-  const [brakeBehavior, setBrakeBehavior] = useState("");
-  const [phase, setPhase] = useState("");
-  const [weather, setWeather] = useState("");
-  const [tempAir, setTempAir] = useState("");
-  const [tempTrack, setTempTrack] = useState("");
-  const [sessionType, setSessionType] = useState("");
-  const [duration, setDuration] = useState("");
-  const [notes, setNotes] = useState("");
-  const [response, setResponse] = useState("");
-  const [loading, setLoading] = useState(false);
+  try {
+    const setupBasePath = path.join(
+      __dirname,
+      "../setupsIA",
+      track,
+      category,
+      `setup_base_${car}.txt`
+    );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setResponse("");
+    if (!fs.existsSync(setupBasePath)) {
+      return res.status(404).json({ error: "Setup de base introuvable pour cette voiture et circuit" });
+    }
 
-    const res = await fetch("https://fastlap-backend.onrender.com/api/optimize-setup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        game, car, track, behavior, brakeBehavior, phase,
-        weather, tempAir, tempTrack, sessionType, duration, notes
-      }),
+    const baseSetup = fs.readFileSync(setupBasePath, "utf-8");
+
+    const userPrompt = `Tu dois modifier le fichier de setup ci-dessous pour le jeu ${game}.
+
+Voiture : ${car}
+Circuit : ${track}
+Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
+Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}
+${behavior ? `Comportement : ${behavior}` : ""}
+${brakeBehavior ? `Freinage : ${brakeBehavior}` : ""}
+${phase ? `Phase : ${phase}` : ""}
+${notes ? `Remarques du client : ${notes}` : ""}
+
+Voici le fichier de setup de base au format texte :
+
+\`\`\`
+${baseSetup}
+\`\`\`
+
+Merci de modifier ce fichier uniquement en fonction des contraintes indiquées ci-dessus.  
+Renvoie-moi **uniquement le contenu du nouveau fichier .txt modifié**, sans le réencapsuler dans du markdown (\`\`\`) ni ajouter de texte explicatif **si la génération réussit**.
+
+❗ En revanche, si tu ne peux pas le faire (limite technique ou politique de contenu), **explique clairement pourquoi.**`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-1106-preview",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es un ingénieur en sport automobile expert en setups pour Assetto Corsa Competizione et rFactor 2. Tu dois modifier un fichier texte de setup fourni, selon des contraintes, et renvoyer uniquement la version modifiée. Si tu ne peux pas, explique clairement pourquoi.",
+        },
+        {
+          role: "user",
+          content: userPrompt,
+        },
+      ],
+      temperature: 0.3,
     });
 
-    const data = await res.json();
-    setResponse(data.reply);
-    setLoading(false);
-  };
+    const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-  return (
-    <div style={{ padding: "2rem" }}>
-      <h2>Optimiser mon setup</h2>
-      <form onSubmit={handleSubmit}>
+    const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
+    const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
+    const timestamp = Date.now();
+    const filename = `${safeCar}_${safeTrack}_${timestamp}.txt`;
+    const outputPath = path.join(__dirname, "../setupsIA", filename);
 
-        {/* Choix du jeu */}
-        <label>
-          Jeu :
-          <select value={game} onChange={e => { setGame(e.target.value); setCar(""); setTrack(""); }} required>
-            <option value="">-- Choisissez un jeu --</option>
-            {Object.keys(gameData).map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-        </label>
-        <br /><br />
+    fs.writeFileSync(outputPath, reply, "utf-8");
 
-        {/* Voiture */}
-        <label>
-          Voiture :
-          <select value={car} onChange={e => setCar(e.target.value)} required disabled={!game}>
-            <option value="">-- Choisissez une voiture --</option>
-            {game && gameData[game].cars.map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </label>
-        <br /><br />
+    await OptimizeRequest.create({
+      game,
+      car,
+      track,
+      handling: behavior || null,
+      brakeBehavior: brakeBehavior || null,
+      phase: phase || null,
+      weather,
+      tempAir: tempAir || null,
+      tempTrack: tempTrack || null,
+      sessionType,
+      duration: duration || null,
+      notes: notes || null,
+      aiResponse: reply,
+    });
 
-        {/* Circuit */}
-        <label>
-          Circuit :
-          <select value={track} onChange={e => setTrack(e.target.value)} required disabled={!game}>
-            <option value="">-- Choisissez un circuit --</option>
-            {game && gameData[game].tracks.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </label>
-        <br /><br />
+    const client = await Client.findOne().sort({ _id: -1 });
 
-        {/* Comportement du véhicule */}
-        <label>
-          Comportement souhaité du véhicule :
-          <select value={behavior} onChange={e => setBehavior(e.target.value)}>
-            <option value="">-- Choisissez --</option>
-            <option value="survireur">Survireur</option>
-            <option value="sous-vireur">Sous-vireur</option>
-            <option value="neutre">Neutre</option>
-          </select>
-        </label>
-        <br /><br />
+    if (client) {
+      const emailData = {
+        to: client.email,
+        from: "contact@fastlap-engineering.fr",
+        subject: `Votre setup IA pour ${car} – ${track}`,
+        text: `Bonjour ${client.prenom},\n\nVeuillez trouver ci-joint votre setup personnalisé généré par notre IA.\n\nSportivement,\nL'équipe FastLap Engineering`,
+        attachments: [
+          {
+            content: fs.readFileSync(outputPath).toString("base64"),
+            filename: filename,
+            type: "application/octet-stream",
+            disposition: "attachment",
+          },
+        ],
+      };
 
-        {/* Freinage */}
-        <label>
-          Comportement souhaité au freinage :
-          <select value={brakeBehavior} onChange={e => setBrakeBehavior(e.target.value)}>
-            <option value="">-- Choisissez --</option>
-            <option value="survireur">Survireur</option>
-            <option value="sous-vireur">Sous-vireur</option>
-          </select>
-        </label>
-        <br /><br />
+      await sgMail.send(emailData);
+      console.log("📩 Mail setup IA envoyé à", client.email);
+    } else {
+      console.error("❌ Aucun client trouvé dans la base pour l’envoi du mail IA.");
+    }
 
-        {/* Phase du virage */}
-        <label>
-          Phase du virage concernée :
-          <select value={phase} onChange={e => setPhase(e.target.value)}>
-            <option value="">-- Choisissez --</option>
-            <option value="entrée">Entrée</option>
-            <option value="milieu">Milieu</option>
-            <option value="sortie">Sortie</option>
-          </select>
-        </label>
-        <br /><br />
+    res.json({ reply, filename });
+  } catch (err) {
+    console.error("Erreur OpenAI, Mongo ou SendGrid :", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 
-        {/* Conditions météo */}
-        <label>
-          Conditions météo :
-          <select value={weather} onChange={e => setWeather(e.target.value)} required>
-            <option value="">-- Choisissez --</option>
-            <option value="sec">Sec</option>
-            <option value="pluie légère">Pluie légère</option>
-            <option value="pluie forte">Pluie forte</option>
-            <option value="nuageux">Nuageux</option>
-          </select>
-        </label>
-        <br /><br />
-
-        {/* Températures */}
-        <label>
-          Température de l’air (°C) :
-          <input type="number" value={tempAir} onChange={e => setTempAir(e.target.value)} required />
-        </label>
-        <br /><br />
-        <label>
-          Température de la piste (°C) :
-          <input type="number" value={tempTrack} onChange={e => setTempTrack(e.target.value)} />
-        </label>
-        <br /><br />
-
-        {/* Type de session */}
-        <label>
-          Type de session :
-          <select value={sessionType} onChange={e => setSessionType(e.target.value)} required>
-            <option value="">-- Choisissez --</option>
-            <option value="qualification">Qualification</option>
-            <option value="course">Course</option>
-          </select>
-        </label>
-        <br /><br />
-        <label>
-          Durée de la session (en minutes) :
-          <input type="number" value={duration} onChange={e => setDuration(e.target.value)} />
-        </label>
-        <br /><br />
-
-        {/* Texte libre */}
-        <label>
-          Explications supplémentaires :
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Décrivez ici les difficultés rencontrées ou ce que vous attendez du setup..."
-          />
-        </label>
-        <br /><br />
-
-        <button type="submit">Envoyer</button>
-      </form>
-
-      {loading && (
-        <div style={{ marginTop: "2rem", color: "#007bff", fontStyle: "italic" }}>
-          <p>✅ Votre demande a bien été envoyée.</p>
-          <p>Notre intelligence artificielle est en train de concevoir un setup sur mesure selon vos critères.</p>
-          <p>⏳ Veuillez patienter quelques instants… Vous recevrez votre setup dès qu’il sera prêt.</p>
-        </div>
-      )}
-
-      {response && (
-        <div style={{ marginTop: "2rem" }}>
-          <h3>Réponse IA :</h3>
-          <p>{response}</p>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default OptimizeSetup;
+module.exports = router;
