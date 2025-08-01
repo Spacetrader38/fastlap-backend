@@ -75,10 +75,11 @@ ${notes ? `- Remarques personnalisées : ${notes}` : ""}
 
 ---
 
-💡 Instructions :
-- Déduis les pressions à froid optimales pour atteindre la pression cible à chaud.
-- Calcule automatiquement la quantité d’essence nécessaire pour tenir la durée de session.
-- Adapte l’appui aérodynamique **et les hauteurs de caisse** selon le tracé du circuit et la météo.
+💡 Instructions obligatoires :
+- Ajuste avec précision les suspensions : amortisseurs, ressorts, barres anti-roulis, bumpstops, hauteurs de caisse.
+- Adapte la balance aérodynamique (aileron avant/arrière + hauteurs de caisse) en fonction du tracé du circuit et des conditions météo.
+- Déduis les pressions à froid nécessaires pour atteindre la pression cible à chaud.
+- Calcule automatiquement la quantité d’essence nécessaire pour la durée de la session.
 - Ne modifie que les paramètres nécessaires à ces ajustements.
 
 ---
@@ -112,29 +113,25 @@ Section : <autre_section>
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    // ✅ Fichiers noms sécurisés
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
     const extension = game === "Assetto Corsa Competizione" ? "json" : "svm";
 
-    // ✅ Chemins fichiers
     const modificationsFile = `modifications_${safeCar}_${safeTrack}_${timestamp}.txt`;
     const modificationsPath = path.join(__dirname, "../setupsIA", modificationsFile);
     const finalFileName = `setup_final_${safeCar}_${safeTrack}_${timestamp}.${extension}`;
     const finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
 
-    // ✅ On sauvegarde la réponse de l’IA dans un .txt
     fs.writeFileSync(modificationsPath, reply, "utf-8");
 
-    // ✅ On injecte les modifs depuis les fichiers
     injectModifications(setupBasePath, modificationsPath, finalFilePath);
 
-    // ✅ Enregistrement Mongo
     await OptimizeRequest.create({
       game,
       car,
       track,
+      category,
       handling: behavior || null,
       entryBehavior: entryBehavior || null,
       brakeBehavior: brakeBehavior || null,
