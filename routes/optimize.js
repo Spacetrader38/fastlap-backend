@@ -18,6 +18,7 @@ router.post("/", async (req, res) => {
     game,
     car,
     track,
+    category,
     behavior,
     brakeBehavior,
     phase,
@@ -28,22 +29,38 @@ router.post("/", async (req, res) => {
     duration,
   } = req.body;
 
-  if (!game || !car || !track || !weather || !sessionType) {
+  if (!game || !car || !track || !category || !weather || !sessionType) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
   try {
     const format = game === "rFactor2" ? ".svm" : ".json";
+    const setupBasePath = path.join(
+      __dirname,
+      "../setupsIA",
+      track,
+      category,
+      `setup_base_${car}${format}`
+    );
 
-    const userPrompt = `Optimise un setup pour ${game}.
-Voiture : ${car}
-Circuit : ${track}
-Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
-Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}${behavior ? `, Comportement : ${behavior}` : ""}${brakeBehavior ? `, Freinage : ${brakeBehavior}` : ""}${phase ? `, Phase : ${phase}` : ""}
+    if (!fs.existsSync(setupBasePath)) {
+      return res.status(404).json({ error: "Setup de base introuvable pour cette voiture et circuit" });
+    }
 
-Ta tâche est de générer un fichier de setup complet au format ${format}, prêt à être utilisé directement dans ${game}.
-Ne fournis aucun commentaire ni explication **si** tu génères le fichier.  
-En revanche, si tu ne peux pas le générer (limite technique ou politique de contenu), explique brièvement pourquoi.`;
+    const baseSetupContent = fs.readFileSync(setupBasePath, "utf-8");
+
+    const userPrompt = `Voici un fichier de setup de base pour ${game} :
+
+${baseSetupContent}
+
+Merci de modifier ce fichier selon les contraintes suivantes :
+- Comportement : ${behavior || "non précisé"}
+- Phase du virage : ${phase || "non précisée"}
+- Freinage : ${brakeBehavior || "non précisé"}
+- Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
+- Conditions : ${weather}${tempTrack ? `, Piste ${tempTrack}°C` : ""}${tempAir ? `, Air ${tempAir}°C` : ""}
+
+Renvoie uniquement le fichier modifié, sans aucun commentaire ni explication.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
@@ -51,7 +68,7 @@ En revanche, si tu ne peux pas le générer (limite technique ou politique de co
         {
           role: "system",
           content:
-            "Tu es un ingénieur en sport automobile expert en jeux de simulation comme Assetto Corsa Competizione et rFactor 2. Si tu peux, tu dois générer un fichier de setup au format .json ou .svm. Si tu ne peux pas, explique clairement pourquoi, sans détour ni redirection vers des forums.",
+            "Tu es un ingénieur en sport automobile expert en jeux de simulation comme Assetto Corsa Competizione et rFactor 2. Tu dois modifier un fichier de setup existant et retourner uniquement sa version modifiée au même format. Si tu ne peux pas, explique pourquoi.",
         },
         {
           role: "user",
@@ -63,19 +80,16 @@ En revanche, si tu ne peux pas le générer (limite technique ou politique de co
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    const folderPath = path.join(__dirname, "../setupsIA");
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath);
-    }
-
+    // Sauvegarde du fichier modifié
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
     const filename = `${safeCar}_${safeTrack}_${timestamp}${format}`;
-    const filePath = path.join(folderPath, filename);
+    const outputPath = path.join(__dirname, "../setupsIA", filename);
 
-    fs.writeFileSync(filePath, reply, "utf-8");
+    fs.writeFileSync(outputPath, reply, "utf-8");
 
+    // Enregistrement dans MongoDB
     await OptimizeRequest.create({
       game,
       car,
@@ -101,7 +115,7 @@ En revanche, si tu ne peux pas le générer (limite technique ou politique de co
         text: `Bonjour ${client.prenom},\n\nVeuillez trouver ci-joint votre setup personnalisé généré par notre IA.\n\nSportivement,\nL'équipe FastLap Engineering`,
         attachments: [
           {
-            content: fs.readFileSync(filePath).toString("base64"),
+            content: fs.readFileSync(outputPath).toString("base64"),
             filename: filename,
             type: "application/octet-stream",
             disposition: "attachment",
