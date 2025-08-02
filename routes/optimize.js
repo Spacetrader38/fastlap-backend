@@ -153,7 +153,7 @@ Section : <autre_section>
         to: client.email,
         from: "contact@fastlap-engineering.fr",
         subject: `Votre setup IA pour ${car} – ${track}`,
-        text: `Bonjour ${client.prenom} ${client.nom},\n\nVeuillez trouver ci-joint le setup final optimisé par notre intelligence artificielle.\n\nSportivement,\nL'équipe FastLap Engineering`,
+        text: `Bonjour ${client.prenom} ${client.nom},\n\nVeuillez trouver ci-joint le setup final optimisé par notre outil de développement.\n\nSportivement,\nL'équipe FastLap Engineering`,
         attachments: [
           {
             content: fs.readFileSync(finalFilePath).toString("base64"),
