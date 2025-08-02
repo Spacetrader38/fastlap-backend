@@ -114,6 +114,14 @@ Section : <autre_section>
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
+    // 🔍 LOG REPONSE OPENAI
+    console.log("🧠 Réponse OpenAI reçue :", reply);
+
+    // 🔍 REFUS OU VIDES
+    if (!reply || reply.includes("Refus de traitement")) {
+      console.warn("⚠️ Réponse OpenAI vide ou refusée :", reply);
+    }
+
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
@@ -124,13 +132,19 @@ Section : <autre_section>
     let finalFileName = `setup_final_${safeCar}_${safeTrack}_${timestamp}.${extension}`;
     let finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
 
-    fs.writeFileSync(modificationsPath, reply, "utf-8");
+    // 🔍 FICHIER MODIFICATIONS
+    try {
+      fs.writeFileSync(modificationsPath, reply, "utf-8");
+      console.log("📄 Fichier de modifications écrit :", modificationsPath);
+    } catch (err) {
+      console.error("❌ Erreur écriture fichier modifications :", err);
+    }
 
     injectModifications(setupBasePath, modificationsPath, finalFilePath);
 
     // ✅ Conversion .txt → .json si nécessaire
     if (extension === "json") {
-      await convertTxtToJson(finalFilePath); // Conversion directe
+      await convertTxtToJson(finalFilePath);
       finalFilePath = finalFilePath.replace(".txt", ".json");
       finalFileName = path.basename(finalFilePath);
     }
