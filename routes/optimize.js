@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
 
     const userPrompt = `Tu es un ingénieur en sport automobile expert des setups dans ${game}.
 
-Tu dois analyser le fichier de setup de base ci-dessous (au format texte brut) et identifier **les paramètres exacts à modifier**, section par section, en fonction des contraintes suivantes.
+    Tu dois analyser le fichier de setup de base ci-dessous (au format texte brut) et identifier **les paramètres exacts à modifier**, section par section, en fonction des contraintes suivantes.
 
 ---
 
@@ -78,10 +78,26 @@ ${notes ? `- Remarques personnalisées : ${notes}` : ""}
 
 💡 Instructions obligatoires :
 - Ajuste avec précision les suspensions : amortisseurs, ressorts, barres anti-roulis, bumpstops, hauteurs de caisse.
-- Adapte la balance aérodynamique (aileron avant/arrière + hauteurs de caisse) en fonction du tracé du circuit et des conditions météo.
-- Déduis les pressions à froid nécessaires pour atteindre la pression cible à chaud.
-- Calcule automatiquement la quantité d’essence nécessaire pour la durée de la session.
-- Ne modifie que les paramètres nécessaires à ces ajustements.
+- Pour les barres anti-roulis :
+  • Si le comportement est survireur, réduis la rigidité de l’arrière ou augmente celle de l’avant.
+  • Si le comportement est sous-vireur, réduis la rigidité de l’avant ou augmente celle de l’arrière.
+- Pour les réglages de toe et de carrossage :
+  • Ajoute du toe-in à l’arrière pour plus de stabilité à haute vitesse ou au freinage.
+  • Diminue le toe avant pour plus de rotation en entrée de virage.
+  • Adapte le carrossage selon le grip global, les types de virages et la température des pneus.
+- Pour la balance aéro :
+  • Analyse les caractéristiques du circuit.
+  • Si le circuit est sinueux ou technique (comme Zandvoort), augmente l’appui arrière.
+  • Si le circuit comporte de longues lignes droites, réduis l’appui arrière dans la limite de la stabilité.
+- Pour les pressions pneus :
+  • Calcule une pression à froid permettant d’atteindre **exactement** la pression à chaud demandée.
+  • Tient compte de la température de piste dans l’estimation de la montée en pression.
+  • Ne dépasse jamais l’objectif de pression spécifié.
+- Pour le carburant :
+  • Adapte la quantité au type de session et à la durée demandée.
+  • Pour une qualification, optimise le poids en évitant le plein.
+- Ne modifie que les paramètres utiles pour répondre aux contraintes du client.
+- Supprime toute explication ou commentaire.
 
 ---
 
@@ -98,6 +114,7 @@ Section : <autre_section>
 ⚠️ Aucune explication, aucun commentaire, aucun texte introductif, aucun markdown.
 
 ❌ Si tu ne peux pas traiter cette demande pour une raison précise (limite technique, sécurité, etc.), indique uniquement : "Refus de traitement : <motif>"`;
+
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
