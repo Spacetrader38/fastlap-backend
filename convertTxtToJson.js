@@ -1,15 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const txtInputPath = path.join(__dirname, "setupsIA/Zandvoort/GT3/setup_modified_Audi R8 LMS Evo.txt");
-const jsonOutputPath = txtInputPath.replace(".txt", ".json");
-
-// Sauvegarde une copie du fichier intermédiaire
-const archiveDir = path.join(__dirname, "archives");
-if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir);
-const archivePath = path.join(archiveDir, path.basename(txtInputPath));
-fs.copyFileSync(txtInputPath, archivePath); // 💾 Archive
-
+// Dictionnaire de correspondance voiture → carName officiel ACC
 const carMap = {
   "Aston Martin": "amr_v8_vantage_gt3",
   "Audi R8 LMS Evo": "audi_r8_lms_evo",
@@ -66,14 +58,12 @@ function convertTxtToJson(txtPath) {
     const sectionMatch = line.match(/^\[(.+)]$/);
     if (sectionMatch) {
       currentSection = sectionMatch[1];
+
+      // Attribution dynamique : advanced ou basic
       const isAdvanced = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"].includes(currentSection);
-      if (isAdvanced) {
-        jsonResult.advancedSetup[currentSection] = {};
-        targetRef = jsonResult.advancedSetup[currentSection];
-      } else {
-        jsonResult.basicSetup[currentSection] = {};
-        targetRef = jsonResult.basicSetup[currentSection];
-      }
+      targetRef = isAdvanced ? jsonResult.advancedSetup : jsonResult.basicSetup;
+
+      if (!targetRef[currentSection]) targetRef[currentSection] = {};
       continue;
     }
 
@@ -91,12 +81,12 @@ function convertTxtToJson(txtPath) {
       value = isNaN(parsed) ? valStr : parsed;
     }
 
-    targetRef[key] = value;
+    targetRef[currentSection][key] = value;
   }
 
   fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
   console.log("✅ Fichier .json généré :", jsonPath);
 }
 
-
+// Pas d'exécution automatique (important sur Render)
 module.exports = convertTxtToJson;
