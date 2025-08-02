@@ -131,7 +131,7 @@ Section : <autre_section>
     // ✅ CONVERSION .txt → .json SI NÉCESSAIRE
     if (extension === "json") {
       const convertedJsonPath = finalFilePath.replace(".json", "_converted.json");
-      await convertTxtToJson(finalFilePath, convertedJsonPath);
+      await convertTxtToJson(finalFilePath);
       finalFilePath = convertedJsonPath;
       finalFileName = path.basename(convertedJsonPath);
     }
