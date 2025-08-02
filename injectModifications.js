@@ -9,7 +9,7 @@ function injectModifications(basePath, modifsPath, outputPath) {
   const baseLines = fs.readFileSync(basePath, "utf-8").split("\n");
   const rawModifs = fs.readFileSync(modifsPath, "utf-8");
 
-  // 🔁 Étape 1 : Parse les modifications reçues d’OpenAI
+  // 🔁 Étape 1 : Parser les modifications reçues d’OpenAI
   let currentSection = "";
   const modifications = {};
 
@@ -36,7 +36,7 @@ function injectModifications(basePath, modifsPath, outputPath) {
     }
   });
 
-  // 🔁 Étape 2 : Injection dans le fichier setup de base
+  // 🔁 Étape 2 : Injection dans les sections du setup de base
   const sectionRegex = /^\[(.+)]$/;
   let currentSectionName = "";
   const outputLines = [];
@@ -49,29 +49,30 @@ function injectModifications(basePath, modifsPath, outputPath) {
       continue;
     }
 
-    const [key, val] = line.split("=");
+    const keyValMatch = line.match(/^(\s*"?.+?"?)\s*=\s*(.+)$/); // clé = valeur
     if (
-      key &&
+      keyValMatch &&
       currentSectionName &&
       modifications[currentSectionName] &&
-      modifications[currentSectionName].hasOwnProperty(key.trim())
+      modifications[currentSectionName].hasOwnProperty(keyValMatch[1].trim())
     ) {
-      const newVal = modifications[currentSectionName][key.trim()];
+      const key = keyValMatch[1].trim();
+      const newVal = modifications[currentSectionName][key];
       const formatted = Array.isArray(newVal)
         ? `[ ${newVal.join(", ")} ]`
         : newVal;
-      outputLines.push(`${key.trim()} = ${formatted}`);
+      outputLines.push(`${key} = ${formatted}`);
     } else {
-      outputLines.push(line);
+      outputLines.push(line); // conserve ligne inchangée
     }
   }
 
-  // 🔁 Étape 3 : Ajoute les sections manquantes dans le setup
+  // 🔁 Étape 3 : Ajoute les sections absentes du fichier de base
   Object.entries(modifications).forEach(([section, params]) => {
-    const sectionHeader = `[${section}]`;
-    const sectionExists = baseLines.some(line => line.trim() === sectionHeader);
-    if (!sectionExists) {
-      outputLines.push(`\n${sectionHeader}`);
+    const header = `[${section}]`;
+    const alreadyExists = outputLines.some(line => line.trim() === header);
+    if (!alreadyExists) {
+      outputLines.push(`\n${header}`);
       Object.entries(params).forEach(([key, value]) => {
         const formatted = Array.isArray(value)
           ? `[ ${value.join(", ")} ]`
