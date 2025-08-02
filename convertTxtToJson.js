@@ -53,7 +53,6 @@ function convertTxtToJson(txtPath) {
 
   let currentSection = "";
   let targetRef = jsonResult.basicSetup;
-  const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"];
 
   for (let line of lines) {
     line = line.trim();
@@ -62,13 +61,28 @@ function convertTxtToJson(txtPath) {
     const sectionMatch = line.match(/^\[(.+)]$/);
     if (sectionMatch) {
       currentSection = sectionMatch[1];
-      targetRef = advancedSections.includes(currentSection) ? jsonResult.advancedSetup : jsonResult.basicSetup;
-      if (!targetRef[currentSection]) targetRef[currentSection] = {};
+
+      // On crée dynamiquement les sous-objets sans filtrer par nom
+      if (!jsonResult.basicSetup[currentSection] && !jsonResult.advancedSetup[currentSection]) {
+        // Par défaut on classe en basicSetup sauf si advanced détecté
+        const isAdvanced = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"].includes(currentSection);
+        if (isAdvanced) {
+          jsonResult.advancedSetup[currentSection] = {};
+          targetRef = jsonResult.advancedSetup[currentSection];
+        } else {
+          jsonResult.basicSetup[currentSection] = {};
+          targetRef = jsonResult.basicSetup[currentSection];
+        }
+      } else {
+        targetRef =
+          jsonResult.basicSetup[currentSection] ||
+          jsonResult.advancedSetup[currentSection];
+      }
       continue;
     }
 
     const [keyRaw, valueRaw] = line.split("=");
-    if (!keyRaw || !valueRaw || !currentSection || !targetRef[currentSection]) continue;
+    if (!keyRaw || !valueRaw || !currentSection || !targetRef) continue;
 
     const key = keyRaw.trim();
     const valStr = valueRaw.trim();
@@ -81,7 +95,7 @@ function convertTxtToJson(txtPath) {
       value = isNaN(parsed) ? valStr : parsed;
     }
 
-    targetRef[currentSection][key] = value;
+    targetRef[key] = value;
   }
 
   fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
@@ -92,4 +106,4 @@ if (require.main === module) {
   convertTxtToJson(txtInputPath);
 }
 
-module.exports = convertTxtToJson; // ✅ Export fonctionnel
+module.exports = convertTxtToJson;
