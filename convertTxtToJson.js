@@ -90,3 +90,4 @@ function convertTxtToJson(txtPath) {
 if (require.main === module) {
   convertTxtToJson(txtInputPath);
 }
+module.exports = convertTxtToJson; // ✅ À AJOUTER
