@@ -98,8 +98,5 @@ function convertTxtToJson(txtPath) {
   console.log("✅ Fichier .json généré :", jsonPath);
 }
 
-if (require.main === module) {
-  convertTxtToJson(txtInputPath);
-}
 
 module.exports = convertTxtToJson;
