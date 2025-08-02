@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const sgMail = require("@sendgrid/mail");
 const injectModifications = require("../injectModifications");
-const convertTxtToJson = require("../convertTxtToJson"); // ✅ AJOUT ICI
+const convertTxtToJson = require("../convertTxtToJson"); // ✅ Fonction importée
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -128,9 +128,9 @@ Section : <autre_section>
 
     injectModifications(setupBasePath, modificationsPath, finalFilePath);
 
-    // ✅ CONVERSION .txt → .json SI NÉCESSAIRE
+    // ✅ Conversion .txt → .json si nécessaire
     if (extension === "json") {
-      await convertTxtToJson(finalFilePath); // ✅ Corrigé
+      await convertTxtToJson(finalFilePath); // Conversion directe
       finalFilePath = finalFilePath.replace(".txt", ".json");
       finalFileName = path.basename(finalFilePath);
     }
@@ -160,7 +160,7 @@ Section : <autre_section>
       const emailData = {
         to: client.email,
         from: "contact@fastlap-engineering.fr",
-        subject: `Votre setup IA pour ${car} – ${track}`,
+        subject: `Votre setup sur mesure pour ${car} – ${track}`,
         text: `Bonjour ${client.prenom} ${client.nom},\n\nVeuillez trouver ci-joint le setup final optimisé par notre outil de développement.\n\nSportivement,\nL'équipe FastLap Engineering`,
         attachments: [
           {
