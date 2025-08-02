@@ -13,20 +13,23 @@ function injectModifications(basePath, modifsPath, outputPath) {
   const modifications = {};
 
   rawModifs.split("\n").forEach(line => {
+    line = line.trim();
+    if (!line) return;
+
     if (line.startsWith("Section")) {
       currentSection = line.split(":")[1]?.trim();
       if (currentSection) {
         modifications[currentSection] = {};
       }
     } else if (line.startsWith("-") && currentSection) {
-      const content = line.substring(2).split(":");
+      const content = line.substring(1).split(":"); // note le `.substring(1)` (et non 2)
       if (content.length >= 2) {
         const key = content[0].trim();
-        const value = content.slice(1).join(":").trim();
+        const valueRaw = content.slice(1).join(":").trim();
         try {
-          modifications[currentSection][key] = JSON.parse(value);
+          modifications[currentSection][key] = JSON.parse(valueRaw);
         } catch {
-          modifications[currentSection][key] = value;
+          modifications[currentSection][key] = valueRaw;
         }
       }
     }
@@ -58,6 +61,19 @@ function injectModifications(basePath, modifsPath, outputPath) {
       outputLines.push(line);
     }
   }
+
+  // 🔁 Ajout des nouvelles sections non présentes dans le fichier de base
+  Object.entries(modifications).forEach(([section, params]) => {
+    if (!baseLines.some(line => line.trim() === `[${section}]`)) {
+      outputLines.push(`\n[${section}]`);
+      Object.entries(params).forEach(([key, value]) => {
+        const formatted = Array.isArray(value)
+          ? `[ ${value.join(", ")} ]`
+          : value;
+        outputLines.push(`${key} = ${formatted}`);
+      });
+    }
+  });
 
   fs.writeFileSync(outputPath, outputLines.join("\n"), "utf-8");
   return outputPath;
