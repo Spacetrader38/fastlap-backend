@@ -9,6 +9,7 @@ function injectModifications(basePath, modifsPath, outputPath) {
   const baseLines = fs.readFileSync(basePath, "utf-8").split("\n");
   const rawModifs = fs.readFileSync(modifsPath, "utf-8");
 
+  // 🔁 Étape 1 : Parse les modifications reçues d’OpenAI
   let currentSection = "";
   const modifications = {};
 
@@ -22,7 +23,7 @@ function injectModifications(basePath, modifsPath, outputPath) {
         modifications[currentSection] = {};
       }
     } else if (line.startsWith("-") && currentSection) {
-      const content = line.substring(1).split(":"); // note le `.substring(1)` (et non 2)
+      const content = line.substring(1).split(":");
       if (content.length >= 2) {
         const key = content[0].trim();
         const valueRaw = content.slice(1).join(":").trim();
@@ -35,6 +36,7 @@ function injectModifications(basePath, modifsPath, outputPath) {
     }
   });
 
+  // 🔁 Étape 2 : Injection dans le fichier setup de base
   const sectionRegex = /^\[(.+)]$/;
   let currentSectionName = "";
   const outputLines = [];
@@ -50,22 +52,26 @@ function injectModifications(basePath, modifsPath, outputPath) {
     const [key, val] = line.split("=");
     if (
       key &&
+      currentSectionName &&
       modifications[currentSectionName] &&
       modifications[currentSectionName].hasOwnProperty(key.trim())
     ) {
       const newVal = modifications[currentSectionName][key.trim()];
-      outputLines.push(
-        `${key.trim()} = ${Array.isArray(newVal) ? `[ ${newVal.join(", ")} ]` : newVal}`
-      );
+      const formatted = Array.isArray(newVal)
+        ? `[ ${newVal.join(", ")} ]`
+        : newVal;
+      outputLines.push(`${key.trim()} = ${formatted}`);
     } else {
       outputLines.push(line);
     }
   }
 
-  // 🔁 Ajout des nouvelles sections non présentes dans le fichier de base
+  // 🔁 Étape 3 : Ajoute les sections manquantes dans le setup
   Object.entries(modifications).forEach(([section, params]) => {
-    if (!baseLines.some(line => line.trim() === `[${section}]`)) {
-      outputLines.push(`\n[${section}]`);
+    const sectionHeader = `[${section}]`;
+    const sectionExists = baseLines.some(line => line.trim() === sectionHeader);
+    if (!sectionExists) {
+      outputLines.push(`\n${sectionHeader}`);
       Object.entries(params).forEach(([key, value]) => {
         const formatted = Array.isArray(value)
           ? `[ ${value.join(", ")} ]`
