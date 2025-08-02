@@ -67,6 +67,17 @@ for (let line of lines) {
   }
 }
 
+// ✅ Vérification sécurité : pression pneus
+try {
+  const p = jsonResult.basicSetup?.tyres?.tyrePressure;
+  if (Array.isArray(p) && p.some(v => v > 35 || v < 18)) {
+    console.warn("🚨 Pression pneus hors plage autorisée. Valeurs ajustées à 27 par défaut.");
+    jsonResult.basicSetup.tyres.tyrePressure = [27, 27, 27, 27];
+  }
+} catch (e) {
+  console.error("Erreur lors du contrôle des pressions pneus :", e);
+}
+
 // Sauvegarder en .json
 fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonResult, null, 2), "utf-8");
 

@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const sgMail = require("@sendgrid/mail");
 const injectModifications = require("../injectModifications");
+const convertTxtToJson = require("../convertTxtToJson"); // ✅ AJOUT ICI
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -120,12 +121,20 @@ Section : <autre_section>
 
     const modificationsFile = `modifications_${safeCar}_${safeTrack}_${timestamp}.txt`;
     const modificationsPath = path.join(__dirname, "../setupsIA", modificationsFile);
-    const finalFileName = `setup_final_${safeCar}_${safeTrack}_${timestamp}.${extension}`;
-    const finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
+    let finalFileName = `setup_final_${safeCar}_${safeTrack}_${timestamp}.${extension}`;
+    let finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
 
     fs.writeFileSync(modificationsPath, reply, "utf-8");
 
     injectModifications(setupBasePath, modificationsPath, finalFilePath);
+
+    // ✅ CONVERSION .txt → .json SI NÉCESSAIRE
+    if (extension === "json") {
+      const convertedJsonPath = finalFilePath.replace(".json", "_converted.json");
+      await convertTxtToJson(finalFilePath, convertedJsonPath);
+      finalFilePath = convertedJsonPath;
+      finalFileName = path.basename(convertedJsonPath);
+    }
 
     await OptimizeRequest.create({
       game,
