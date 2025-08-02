@@ -42,8 +42,6 @@ function convertTxtToJson(txtPath) {
   const carKey = Object.keys(carMap).find(name => carRaw.includes(name));
   const carName = carMap[carKey] || "car_unknown";
 
-  const lines = fs.readFileSync(txtPath, "utf-8").split("\n");
-
   let jsonResult = {
     carName,
     basicSetup: {},
@@ -51,53 +49,56 @@ function convertTxtToJson(txtPath) {
     trackBopType: 9
   };
 
-  let currentSection = "";
-  let targetRef = jsonResult.basicSetup;
+  const parseFileToJson = (lines, overwrite = true) => {
+    let currentSection = "";
+    let targetRef = jsonResult.basicSetup;
 
-  for (let line of lines) {
-    line = line.trim();
-    if (!line || line.startsWith("#")) continue;
+    for (let line of lines) {
+      line = line.trim();
+      if (!line || line.startsWith("#")) continue;
 
-    const sectionMatch = line.match(/^\[(.+)]$/);
-    if (sectionMatch) {
-      currentSection = sectionMatch[1];
-
-      // On crée dynamiquement les sous-objets sans filtrer par nom
-      if (!jsonResult.basicSetup[currentSection] && !jsonResult.advancedSetup[currentSection]) {
-        // Par défaut on classe en basicSetup sauf si advanced détecté
+      const sectionMatch = line.match(/^\[(.+)]$/);
+      if (sectionMatch) {
+        currentSection = sectionMatch[1];
         const isAdvanced = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"].includes(currentSection);
         if (isAdvanced) {
-          jsonResult.advancedSetup[currentSection] = {};
+          if (!jsonResult.advancedSetup[currentSection]) jsonResult.advancedSetup[currentSection] = {};
           targetRef = jsonResult.advancedSetup[currentSection];
         } else {
-          jsonResult.basicSetup[currentSection] = {};
+          if (!jsonResult.basicSetup[currentSection]) jsonResult.basicSetup[currentSection] = {};
           targetRef = jsonResult.basicSetup[currentSection];
         }
-      } else {
-        targetRef =
-          jsonResult.basicSetup[currentSection] ||
-          jsonResult.advancedSetup[currentSection];
+        continue;
       }
-      continue;
+
+      const [keyRaw, valueRaw] = line.split("=");
+      if (!keyRaw || !valueRaw || !currentSection || !targetRef) continue;
+
+      const key = keyRaw.trim();
+      const valStr = valueRaw.trim();
+      let value = valStr.startsWith("[") ? parseArray(valStr) : (isNaN(parseFloat(valStr)) ? valStr : parseFloat(valStr));
+
+      // N'écrase pas les modifs si overwrite = false
+      if (!overwrite && targetRef[key] !== undefined) continue;
+
+      targetRef[key] = value;
     }
+  };
 
-    const [keyRaw, valueRaw] = line.split("=");
-    if (!keyRaw || !valueRaw || !currentSection || !targetRef) continue;
+  // 1️⃣ On parse le fichier modifié (avec overwrite = true)
+  const linesMod = fs.readFileSync(txtPath, "utf-8").split("\n");
+  parseFileToJson(linesMod, true);
 
-    const key = keyRaw.trim();
-    const valStr = valueRaw.trim();
-    let value;
-
-    if (valStr.startsWith("[")) {
-      value = parseArray(valStr);
-    } else {
-      const parsed = parseFloat(valStr);
-      value = isNaN(parsed) ? valStr : parsed;
-    }
-
-    targetRef[key] = value;
+  // 2️⃣ On parse ensuite le fichier setup_base_xxx.txt (avec overwrite = false)
+  const basePath = path.join(__dirname, "setupsIA", "Zandvoort", "GT3", `setup_base_${carRaw}.txt`);
+  if (fs.existsSync(basePath)) {
+    const linesBase = fs.readFileSync(basePath, "utf-8").split("\n");
+    parseFileToJson(linesBase, false);
+  } else {
+    console.warn("⚠️ Fichier de base introuvable :", basePath);
   }
 
+  // 3️⃣ Écriture du fichier final
   fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
   console.log("✅ Fichier .json généré :", jsonPath);
 }
