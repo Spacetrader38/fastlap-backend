@@ -130,10 +130,9 @@ Section : <autre_section>
 
     // ✅ CONVERSION .txt → .json SI NÉCESSAIRE
     if (extension === "json") {
-      const convertedJsonPath = finalFilePath.replace(".json", "_converted.json");
-      await convertTxtToJson(finalFilePath);
-      finalFilePath = convertedJsonPath;
-      finalFileName = path.basename(convertedJsonPath);
+      await convertTxtToJson(finalFilePath); // ✅ Corrigé
+      finalFilePath = finalFilePath.replace(".txt", ".json");
+      finalFileName = path.basename(finalFilePath);
     }
 
     await OptimizeRequest.create({
