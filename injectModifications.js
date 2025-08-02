@@ -22,7 +22,7 @@ function injectModifications(basePath, modifsPath, outputPath) {
       const content = line.substring(2).split(":");
       if (content.length >= 2) {
         const key = content[0].trim();
-        const value = content.slice(1).join(":").trim(); // Pour les cas avec ":" dans la valeur
+        const value = content.slice(1).join(":").trim();
         try {
           modifications[currentSection][key] = JSON.parse(value);
         } catch {

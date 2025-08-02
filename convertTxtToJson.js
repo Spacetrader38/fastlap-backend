@@ -1,69 +1,84 @@
 const fs = require("fs");
 const path = require("path");
 
-function convertTxtToJson(txtInputPath, jsonOutputPath) {
-  const lines = fs.readFileSync(txtInputPath, "utf-8").split("\n");
+const txtInputPath = path.join(__dirname, "setupsIA/Zandvoort/GT3/setup_modified_Audi R8 LMS Evo.txt");
+const jsonOutputPath = txtInputPath.replace(".txt", ".json");
 
-  let jsonResult = {
-    carName: "amr_v8_vantage_gt3", // tu peux adapter dynamiquement plus tard
-    basicSetup: {},
-    advancedSetup: {},
-    trackBopType: 9
-  };
+// Dictionnaire de correspondance voiture → carName officiel ACC
+const carMap = {
+  "Aston Martin": "amr_v8_vantage_gt3",
+  "Audi R8 LMS Evo": "audi_r8_lms_evo",
+  "Bentley Continentale": "bentley_continental_gt3",
+  "BMW M6 GT3": "bmw_m6_gt3",
+  "Ferrari 488 GT3 Evo": "ferrari_488_gt3_evo",
+  "Ferrari 488 GT3": "ferrari_488_gt3",
+  "Honda NSX GT3 Evo": "honda_nsx_gt3_evo",
+  "Lamborghini Hura Evo": "lamborghini_huracan_gt3_evo",
+  "Lamborghini Huracan": "lamborghini_huracan_gt3",
+  "Lexus GT3": "lexus_rc_f_gt3",
+  "Mc Laren 720S GT3": "mclaren_720s_gt3",
+  "Mercedes AMG GT3 2020": "mercedes_amg_gt3_2020",
+  "Mercedes AMG GT3": "mercedes_amg_gt3",
+  "Nissan GTR GT3": "nissan_gt_r_nismo_gt3",
+  "Porsche 991 GT3 R": "porsche_991_gt3_r",
+  "Porsche II 991 GT3 R": "porsche_991_ii_gt3_r"
+};
 
-  let currentSection = "";
-  let targetRef = jsonResult.basicSetup;
-  const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"];
+// Déduction automatique du nom de voiture à partir du nom de fichier
+const fileNameParts = path.basename(txtInputPath, ".txt").split("_"); // ex: ["setup", "modified", "Audi", "R8", "LMS", "Evo"]
+const carRaw = fileNameParts.slice(2).join(" "); // Audi R8 LMS Evo
+const carKey = Object.keys(carMap).find(name => carRaw.includes(name));
+const carName = carMap[carKey] || "car_unknown";
 
-  for (let line of lines) {
-    line = line.trim();
-    if (!line || line.startsWith("#")) continue;
+// Lire le fichier .txt
+const lines = fs.readFileSync(txtInputPath, "utf-8").split("\n");
 
-    const sectionMatch = line.match(/^\[(.+)]$/);
-    if (sectionMatch) {
-      currentSection = sectionMatch[1];
-      targetRef = advancedSections.includes(currentSection) ? jsonResult.advancedSetup : jsonResult.basicSetup;
-      if (!targetRef[currentSection]) targetRef[currentSection] = {};
-      continue;
-    }
+let jsonResult = {
+  carName,
+  basicSetup: {},
+  advancedSetup: {},
+  trackBopType: 9
+};
 
-    const [keyRaw, valueRaw] = line.split("=");
-    if (!keyRaw || !valueRaw) continue;
+let currentSection = "";
+let targetRef = jsonResult.basicSetup;
+const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"];
 
-    const key = keyRaw.trim();
-    let valueStr = valueRaw.trim();
-    let value;
+for (let line of lines) {
+  line = line.trim();
+  if (!line || line.startsWith("#")) continue;
 
-    if (valueStr.startsWith("[")) {
-      try {
-        value = JSON.parse(valueStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
-      } catch {
-        value = valueStr;
-      }
-    } else if (!isNaN(valueStr)) {
-      value = parseFloat(valueStr);
-    } else {
-      value = valueStr;
-    }
-
-    if (targetRef[currentSection]) {
-      targetRef[currentSection][key] = value;
-    }
+  const sectionMatch = line.match(/^\[(.+)]$/);
+  if (sectionMatch) {
+    currentSection = sectionMatch[1];
+    targetRef = advancedSections.includes(currentSection) ? jsonResult.advancedSetup : jsonResult.basicSetup;
+    if (!targetRef[currentSection]) targetRef[currentSection] = {};
+    continue;
   }
 
-  // ✅ Sécurité pression pneus
-  try {
-    const p = jsonResult.basicSetup?.tyres?.tyrePressure;
-    if (Array.isArray(p) && p.some(v => v > 35 || v < 18)) {
-      console.warn("🚨 Pression pneus hors plage autorisée. Valeurs ajustées à 27 par défaut.");
-      jsonResult.basicSetup.tyres.tyrePressure = [27, 27, 27, 27];
+  const [keyRaw, valueRaw] = line.split("=");
+  if (!keyRaw || !valueRaw) continue;
+
+  const key = keyRaw.trim();
+  const valStr = valueRaw.trim();
+  let value;
+
+  if (valStr.startsWith("[")) {
+    try {
+      value = JSON.parse(valStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
+    } catch {
+      value = valStr;
     }
-  } catch (e) {
-    console.error("Erreur lors du contrôle des pressions pneus :", e);
+  } else if (!isNaN(valStr)) {
+    value = parseFloat(valStr);
+  } else {
+    value = valStr;
   }
 
-  fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonResult, null, 2), "utf-8");
-  return jsonOutputPath;
+  if (targetRef[currentSection]) {
+    targetRef[currentSection][key] = value;
+  }
 }
 
-module.exports = convertTxtToJson;
+fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonResult, null, 2), "utf-8");
+console.log("✅ Fichier .json généré :", jsonOutputPath);

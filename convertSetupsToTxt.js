@@ -3,7 +3,7 @@ const path = require("path");
 
 const baseDir = path.join(__dirname, "setupsIA");
 
-function convertToTxtRecursively(dir = baseDir) {
+function convertToTxtRecursively(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
   for (const entry of entries) {
@@ -20,4 +20,4 @@ function convertToTxtRecursively(dir = baseDir) {
   }
 }
 
-module.exports = convertToTxtRecursively;
+convertToTxtRecursively(baseDir);
