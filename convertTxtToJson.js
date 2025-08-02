@@ -24,61 +24,69 @@ const carMap = {
   "Porsche II 991 GT3 R": "porsche_991_ii_gt3_r"
 };
 
-// Déduction automatique du nom de voiture à partir du nom de fichier
-const fileNameParts = path.basename(txtInputPath, ".txt").split("_"); // ex: ["setup", "modified", "Audi", "R8", "LMS", "Evo"]
-const carRaw = fileNameParts.slice(2).join(" "); // Audi R8 LMS Evo
-const carKey = Object.keys(carMap).find(name => carRaw.includes(name));
-const carName = carMap[carKey] || "car_unknown";
+// Fonction principale encapsulée
+function convertTxtToJson(txtPath) {
+  const jsonPath = txtPath.replace(".txt", ".json");
 
-// Lire le fichier .txt
-const lines = fs.readFileSync(txtInputPath, "utf-8").split("\n");
+  const fileNameParts = path.basename(txtPath, ".txt").split("_");
+  const carRaw = fileNameParts.slice(2).join(" ");
+  const carKey = Object.keys(carMap).find(name => carRaw.includes(name));
+  const carName = carMap[carKey] || "car_unknown";
 
-let jsonResult = {
-  carName,
-  basicSetup: {},
-  advancedSetup: {},
-  trackBopType: 9
-};
+  const lines = fs.readFileSync(txtPath, "utf-8").split("\n");
 
-let currentSection = "";
-let targetRef = jsonResult.basicSetup;
-const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"];
+  let jsonResult = {
+    carName,
+    basicSetup: {},
+    advancedSetup: {},
+    trackBopType: 9
+  };
 
-for (let line of lines) {
-  line = line.trim();
-  if (!line || line.startsWith("#")) continue;
+  let currentSection = "";
+  let targetRef = jsonResult.basicSetup;
+  const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"];
 
-  const sectionMatch = line.match(/^\[(.+)]$/);
-  if (sectionMatch) {
-    currentSection = sectionMatch[1];
-    targetRef = advancedSections.includes(currentSection) ? jsonResult.advancedSetup : jsonResult.basicSetup;
-    if (!targetRef[currentSection]) targetRef[currentSection] = {};
-    continue;
-  }
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || line.startsWith("#")) continue;
 
-  const [keyRaw, valueRaw] = line.split("=");
-  if (!keyRaw || !valueRaw) continue;
+    const sectionMatch = line.match(/^\[(.+)]$/);
+    if (sectionMatch) {
+      currentSection = sectionMatch[1];
+      targetRef = advancedSections.includes(currentSection) ? jsonResult.advancedSetup : jsonResult.basicSetup;
+      if (!targetRef[currentSection]) targetRef[currentSection] = {};
+      continue;
+    }
 
-  const key = keyRaw.trim();
-  const valStr = valueRaw.trim();
-  let value;
+    const [keyRaw, valueRaw] = line.split("=");
+    if (!keyRaw || !valueRaw) continue;
 
-  if (valStr.startsWith("[")) {
-    try {
-      value = JSON.parse(valStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
-    } catch {
+    const key = keyRaw.trim();
+    const valStr = valueRaw.trim();
+    let value;
+
+    if (valStr.startsWith("[")) {
+      try {
+        value = JSON.parse(valStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
+      } catch {
+        value = valStr;
+      }
+    } else if (!isNaN(valStr)) {
+      value = parseFloat(valStr);
+    } else {
       value = valStr;
     }
-  } else if (!isNaN(valStr)) {
-    value = parseFloat(valStr);
-  } else {
-    value = valStr;
+
+    if (targetRef[currentSection]) {
+      targetRef[currentSection][key] = value;
+    }
   }
 
-  if (targetRef[currentSection]) {
-    targetRef[currentSection][key] = value;
-  }
+  fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
+  console.log("✅ Fichier .json généré :", jsonPath);
 }
 
-fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonResult, null, 2), "utf-8");
-console.log("✅ Fichier .json généré :", jsonOutputPath);
+// ⛔ Ne s'exécute que si lancé directement (pas au démarrage Render)
+if (require.main === module) {
+  convertTxtToJson(txtInputPath);
+}
