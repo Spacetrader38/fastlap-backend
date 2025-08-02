@@ -98,6 +98,11 @@ ${notes ? `- Remarques personnalisées : ${notes}` : ""}
   • Pour une qualification, optimise le poids en évitant le plein.
 - Ne modifie que les paramètres utiles pour répondre aux contraintes du client.
 - Supprime toute explication ou commentaire.
+- Toutes les valeurs doivent être exprimées en chiffres réels.
+- Ne jamais renvoyer de texte comme "valeur calculée", "valeur augmentée", etc.
+- Fournis uniquement des valeurs chiffrées exploitables dans un fichier de setup.
+- Ce fichier sera directement utilisé dans le jeu, il ne doit contenir aucune estimation floue.
+
 
 ---
 
