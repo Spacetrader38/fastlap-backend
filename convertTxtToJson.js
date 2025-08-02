@@ -1,84 +1,69 @@
 const fs = require("fs");
 const path = require("path");
 
-const txtInputPath = path.join(__dirname, "setupsIA/Zandvoort/GT3/setup_modified_Aston Martin.txt");
-const jsonOutputPath = path.join(__dirname, "setupsIA/Zandvoort/GT3/setup_modified_Aston Martin.json");
+function convertTxtToJson(txtInputPath, jsonOutputPath) {
+  const lines = fs.readFileSync(txtInputPath, "utf-8").split("\n");
 
-// Lire le fichier .txt
-const lines = fs.readFileSync(txtInputPath, "utf-8").split("\n");
+  let jsonResult = {
+    carName: "amr_v8_vantage_gt3", // tu peux adapter dynamiquement plus tard
+    basicSetup: {},
+    advancedSetup: {},
+    trackBopType: 9
+  };
 
-// Préparer l’objet JSON final
-let jsonResult = {
-  carName: "amr_v8_vantage_gt3", // à adapter dynamiquement plus tard
-  basicSetup: {},
-  advancedSetup: {},
-  trackBopType: 9
-};
+  let currentSection = "";
+  let targetRef = jsonResult.basicSetup;
+  const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"];
 
-let currentSection = "";
-let targetRef = jsonResult.basicSetup; // on commence par basicSetup
-const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"]; // sections avancées
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || line.startsWith("#")) continue;
 
-for (let line of lines) {
-  line = line.trim();
-
-  // Sauter les lignes vides
-  if (!line || line.startsWith("#")) continue;
-
-  // Section détectée : [tyres], [alignment], etc.
-  const sectionMatch = line.match(/^\[(.+)]$/);
-  if (sectionMatch) {
-    currentSection = sectionMatch[1];
-
-    // Basculer vers advancedSetup si nécessaire
-    if (advancedSections.includes(currentSection)) {
-      targetRef = jsonResult.advancedSetup;
-    } else {
-      targetRef = jsonResult.basicSetup;
+    const sectionMatch = line.match(/^\[(.+)]$/);
+    if (sectionMatch) {
+      currentSection = sectionMatch[1];
+      targetRef = advancedSections.includes(currentSection) ? jsonResult.advancedSetup : jsonResult.basicSetup;
+      if (!targetRef[currentSection]) targetRef[currentSection] = {};
+      continue;
     }
 
-    if (!targetRef[currentSection]) targetRef[currentSection] = {};
-    continue;
-  }
+    const [keyRaw, valueRaw] = line.split("=");
+    if (!keyRaw || !valueRaw) continue;
 
-  // Ligne de type clé = valeur
-  const [keyRaw, valueRaw] = line.split("=");
-  if (!keyRaw || !valueRaw) continue;
+    const key = keyRaw.trim();
+    let valueStr = valueRaw.trim();
+    let value;
 
-  const key = keyRaw.trim();
-  let valueStr = valueRaw.trim();
-
-  // Gérer les tableaux (ex: [ 51, 52, 53 ])
-  let value;
-  if (valueStr.startsWith("[")) {
-    try {
-      value = JSON.parse(valueStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
-    } catch {
+    if (valueStr.startsWith("[")) {
+      try {
+        value = JSON.parse(valueStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
+      } catch {
+        value = valueStr;
+      }
+    } else if (!isNaN(valueStr)) {
+      value = parseFloat(valueStr);
+    } else {
       value = valueStr;
     }
-  } else if (!isNaN(valueStr)) {
-    value = parseFloat(valueStr);
-  } else {
-    value = valueStr;
+
+    if (targetRef[currentSection]) {
+      targetRef[currentSection][key] = value;
+    }
   }
 
-  if (targetRef[currentSection]) {
-    targetRef[currentSection][key] = value;
+  // ✅ Sécurité pression pneus
+  try {
+    const p = jsonResult.basicSetup?.tyres?.tyrePressure;
+    if (Array.isArray(p) && p.some(v => v > 35 || v < 18)) {
+      console.warn("🚨 Pression pneus hors plage autorisée. Valeurs ajustées à 27 par défaut.");
+      jsonResult.basicSetup.tyres.tyrePressure = [27, 27, 27, 27];
+    }
+  } catch (e) {
+    console.error("Erreur lors du contrôle des pressions pneus :", e);
   }
+
+  fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonResult, null, 2), "utf-8");
+  return jsonOutputPath;
 }
 
-// ✅ Vérification sécurité : pression pneus
-try {
-  const p = jsonResult.basicSetup?.tyres?.tyrePressure;
-  if (Array.isArray(p) && p.some(v => v > 35 || v < 18)) {
-    console.warn("🚨 Pression pneus hors plage autorisée. Valeurs ajustées à 27 par défaut.");
-    jsonResult.basicSetup.tyres.tyrePressure = [27, 27, 27, 27];
-  }
-} catch (e) {
-  console.error("Erreur lors du contrôle des pressions pneus :", e);
-}
-
-// Sauvegarder en .json
-fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonResult, null, 2), "utf-8");
-
-console.log("✅ Fichier .json généré :", jsonOutputPath);
+module.exports = convertTxtToJson;
