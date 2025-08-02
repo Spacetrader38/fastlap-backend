@@ -24,7 +24,16 @@ const carMap = {
   "Porsche II 991 GT3 R": "porsche_991_ii_gt3_r"
 };
 
-// Fonction principale encapsulée
+function parseArray(value) {
+  return value
+    .replace(/\[|\]/g, "")
+    .split(",")
+    .map(v => {
+      const num = parseFloat(v.trim());
+      return isNaN(num) ? v.trim() : num;
+    });
+}
+
 function convertTxtToJson(txtPath) {
   const jsonPath = txtPath.replace(".txt", ".json");
 
@@ -59,35 +68,28 @@ function convertTxtToJson(txtPath) {
     }
 
     const [keyRaw, valueRaw] = line.split("=");
-    if (!keyRaw || !valueRaw) continue;
+    if (!keyRaw || !valueRaw || !currentSection || !targetRef[currentSection]) continue;
 
     const key = keyRaw.trim();
     const valStr = valueRaw.trim();
     let value;
 
     if (valStr.startsWith("[")) {
-      try {
-        value = JSON.parse(valStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
-      } catch {
-        value = valStr;
-      }
-    } else if (!isNaN(valStr)) {
-      value = parseFloat(valStr);
+      value = parseArray(valStr);
     } else {
-      value = valStr;
+      const parsed = parseFloat(valStr);
+      value = isNaN(parsed) ? valStr : parsed;
     }
 
-    if (targetRef[currentSection]) {
-      targetRef[currentSection][key] = value;
-    }
+    targetRef[currentSection][key] = value;
   }
 
   fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
   console.log("✅ Fichier .json généré :", jsonPath);
 }
 
-// ⛔ Ne s'exécute que si lancé directement (pas au démarrage Render)
 if (require.main === module) {
   convertTxtToJson(txtInputPath);
 }
-module.exports = convertTxtToJson; // ✅ À AJOUTER
+
+module.exports = convertTxtToJson; // ✅ Export fonctionnel
