@@ -4,7 +4,12 @@ const path = require("path");
 const txtInputPath = path.join(__dirname, "setupsIA/Zandvoort/GT3/setup_modified_Audi R8 LMS Evo.txt");
 const jsonOutputPath = txtInputPath.replace(".txt", ".json");
 
-// Dictionnaire de correspondance voiture → carName officiel ACC
+// Sauvegarde une copie du fichier intermédiaire
+const archiveDir = path.join(__dirname, "archives");
+if (!fs.existsSync(archiveDir)) fs.mkdirSync(archiveDir);
+const archivePath = path.join(archiveDir, path.basename(txtInputPath));
+fs.copyFileSync(txtInputPath, archivePath); // 💾 Archive
+
 const carMap = {
   "Aston Martin": "amr_v8_vantage_gt3",
   "Audi R8 LMS Evo": "audi_r8_lms_evo",
@@ -42,6 +47,8 @@ function convertTxtToJson(txtPath) {
   const carKey = Object.keys(carMap).find(name => carRaw.includes(name));
   const carName = carMap[carKey] || "car_unknown";
 
+  const lines = fs.readFileSync(txtPath, "utf-8").split("\n");
+
   let jsonResult = {
     carName,
     basicSetup: {},
@@ -49,56 +56,44 @@ function convertTxtToJson(txtPath) {
     trackBopType: 9
   };
 
-  const parseFileToJson = (lines, overwrite = true) => {
-    let currentSection = "";
-    let targetRef = jsonResult.basicSetup;
+  let currentSection = "";
+  let targetRef = jsonResult.basicSetup;
 
-    for (let line of lines) {
-      line = line.trim();
-      if (!line || line.startsWith("#")) continue;
+  for (let line of lines) {
+    line = line.trim();
+    if (!line || line.startsWith("#")) continue;
 
-      const sectionMatch = line.match(/^\[(.+)]$/);
-      if (sectionMatch) {
-        currentSection = sectionMatch[1];
-        const isAdvanced = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"].includes(currentSection);
-        if (isAdvanced) {
-          if (!jsonResult.advancedSetup[currentSection]) jsonResult.advancedSetup[currentSection] = {};
-          targetRef = jsonResult.advancedSetup[currentSection];
-        } else {
-          if (!jsonResult.basicSetup[currentSection]) jsonResult.basicSetup[currentSection] = {};
-          targetRef = jsonResult.basicSetup[currentSection];
-        }
-        continue;
+    const sectionMatch = line.match(/^\[(.+)]$/);
+    if (sectionMatch) {
+      currentSection = sectionMatch[1];
+      const isAdvanced = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"].includes(currentSection);
+      if (isAdvanced) {
+        jsonResult.advancedSetup[currentSection] = {};
+        targetRef = jsonResult.advancedSetup[currentSection];
+      } else {
+        jsonResult.basicSetup[currentSection] = {};
+        targetRef = jsonResult.basicSetup[currentSection];
       }
-
-      const [keyRaw, valueRaw] = line.split("=");
-      if (!keyRaw || !valueRaw || !currentSection || !targetRef) continue;
-
-      const key = keyRaw.trim();
-      const valStr = valueRaw.trim();
-      let value = valStr.startsWith("[") ? parseArray(valStr) : (isNaN(parseFloat(valStr)) ? valStr : parseFloat(valStr));
-
-      // N'écrase pas les modifs si overwrite = false
-      if (!overwrite && targetRef[key] !== undefined) continue;
-
-      targetRef[key] = value;
+      continue;
     }
-  };
 
-  // 1️⃣ On parse le fichier modifié (avec overwrite = true)
-  const linesMod = fs.readFileSync(txtPath, "utf-8").split("\n");
-  parseFileToJson(linesMod, true);
+    const [keyRaw, valueRaw] = line.split("=");
+    if (!keyRaw || !valueRaw || !currentSection || !targetRef) continue;
 
-  // 2️⃣ On parse ensuite le fichier setup_base_xxx.txt (avec overwrite = false)
-  const basePath = path.join(__dirname, "setupsIA", "Zandvoort", "GT3", `setup_base_${carRaw}.txt`);
-  if (fs.existsSync(basePath)) {
-    const linesBase = fs.readFileSync(basePath, "utf-8").split("\n");
-    parseFileToJson(linesBase, false);
-  } else {
-    console.warn("⚠️ Fichier de base introuvable :", basePath);
+    const key = keyRaw.trim();
+    const valStr = valueRaw.trim();
+    let value;
+
+    if (valStr.startsWith("[")) {
+      value = parseArray(valStr);
+    } else {
+      const parsed = parseFloat(valStr);
+      value = isNaN(parsed) ? valStr : parsed;
+    }
+
+    targetRef[key] = value;
   }
 
-  // 3️⃣ Écriture du fichier final
   fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
   console.log("✅ Fichier .json généré :", jsonPath);
 }
