@@ -6,7 +6,7 @@ function injectModifications(basePath, modifsPath, outputPath) {
     throw new Error("Fichier de base ou de modifications manquant.");
   }
 
-  const baseData = JSON.parse(fs.readFileSync(basePath, "utf-8"));
+  const baseLines = fs.readFileSync(basePath, "utf-8").split("\n");
   const rawModifs = fs.readFileSync(modifsPath, "utf-8");
 
   // 🔁 Étape 1 : Parser les modifications reçues d’OpenAI
@@ -36,23 +36,53 @@ function injectModifications(basePath, modifsPath, outputPath) {
     }
   });
 
-  // 🔁 Étape 2 : Injecter les modifications dans la structure JSON
-  for (const section in modifications) {
-    const sectionModifs = modifications[section];
+  // 🔁 Étape 2 : Injection dans les sections du setup de base
+  const sectionRegex = /^\[(.+)]$/;
+  let currentSectionName = "";
+  const outputLines = [];
 
-    // Si la section existe déjà dans baseData, on modifie ses clés
-    if (baseData.basicSetup?.[section]) {
-      Object.assign(baseData.basicSetup[section], sectionModifs);
-    } else if (baseData.advancedSetup?.[section]) {
-      Object.assign(baseData.advancedSetup[section], sectionModifs);
+  for (let line of baseLines) {
+    const match = line.match(sectionRegex);
+    if (match) {
+      currentSectionName = match[1];
+      outputLines.push(line);
+      continue;
+    }
+
+    const keyValMatch = line.match(/^(\s*"?.+?"?)\s*=\s*(.+)$/); // clé = valeur
+    if (
+      keyValMatch &&
+      currentSectionName &&
+      modifications[currentSectionName] &&
+      modifications[currentSectionName].hasOwnProperty(keyValMatch[1].trim())
+    ) {
+      const key = keyValMatch[1].trim();
+      const newVal = modifications[currentSectionName][key];
+      const formatted = Array.isArray(newVal)
+        ? `[ ${newVal.join(", ")} ]`
+        : newVal;
+      outputLines.push(`${key} = ${formatted}`);
     } else {
-      // Sinon on ajoute la section dans basicSetup si elle n’existe pas
-      if (!baseData.basicSetup) baseData.basicSetup = {};
-      baseData.basicSetup[section] = sectionModifs;
+      outputLines.push(line); // conserve ligne inchangée
     }
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(baseData, null, 2), "utf-8");
+  // 🔁 Étape 3 : Ajoute les sections absentes du fichier de base
+  Object.entries(modifications).forEach(([section, params]) => {
+    const header = `[${section}]`;
+    const alreadyExists = outputLines.some(line => line.trim() === header);
+    if (!alreadyExists) {
+      outputLines.push(`\n${header}`);
+      Object.entries(params).forEach(([key, value]) => {
+        const formatted = Array.isArray(value)
+          ? `[ ${value.join(", ")} ]`
+          : value;
+        outputLines.push(`${key} = ${formatted}`);
+      });
+    }
+  });
+
+  fs.writeFileSync(outputPath, outputLines.join("\n"), "utf-8");
   return outputPath;
 }
 
