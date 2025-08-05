@@ -48,8 +48,9 @@ function convertTxtToJson(txtPath) {
     trackBopType: 9
   };
 
+  let currentTopLevel = "";
   let currentSection = "";
-  let targetRef = jsonResult.basicSetup;
+  let targetRef = null;
 
   for (let line of lines) {
     line = line.trim();
@@ -57,14 +58,18 @@ function convertTxtToJson(txtPath) {
 
     const sectionMatch = line.match(/^\[(.+)]$/);
     if (sectionMatch) {
-      currentSection = sectionMatch[1];
-
-      // Attribution dynamique : advanced ou basic
-      const isAdvanced = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"].includes(currentSection);
-      targetRef = isAdvanced ? jsonResult.advancedSetup : jsonResult.basicSetup;
-
-      if (!targetRef[currentSection]) targetRef[currentSection] = {};
-      continue;
+      const sectionName = sectionMatch[1];
+      if (sectionName === "basicSetup" || sectionName === "advancedSetup") {
+        currentTopLevel = sectionName;
+        targetRef = jsonResult[currentTopLevel];
+        continue;
+      } else {
+        currentSection = sectionName;
+        if (targetRef && !targetRef[currentSection]) {
+          targetRef[currentSection] = {};
+        }
+        continue;
+      }
     }
 
     const [keyRaw, valueRaw] = line.split("=");
@@ -81,6 +86,9 @@ function convertTxtToJson(txtPath) {
       value = isNaN(parsed) ? valStr : parsed;
     }
 
+    if (!targetRef[currentSection]) {
+      targetRef[currentSection] = {};
+    }
     targetRef[currentSection][key] = value;
   }
 
