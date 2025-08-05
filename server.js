@@ -13,6 +13,10 @@ const paymentRoutes = require('./routes/payment');
 const clientInfoRoutes = require('./routes/clientInfo');
 const invoiceRoutes = require('./routes/invoice');
 const optimizeRoute = require('./routes/optimize'); // <-- AJOUTÉ
+// ⬆️ en haut avec les imports
+const accessRoutes = require('./routes/access'); // <-- nouveau
+// ⬇️ section "ROUTES API"
+app.use('/api/access', accessRoutes); // <-- nouvelle ligne
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
