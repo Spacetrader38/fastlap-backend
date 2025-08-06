@@ -1,62 +1,86 @@
-- carName : ferrari_488_gt3_evo
-
-Section : basicSetup
-
-Section : tyres
-- tyreCompound : 0
-- tyrePressure : 48, 48, 49, 49
-
-Section : alignment
-- camber : 14, 14, 18, 18
-- toe : 20, 20, 60, 60
-- staticCamber : -2.7899670600891113, -2.7899625301361084, -2.1245548725128174, -2.1244564056396484
-- toeOutLinear : 0.0012410542694851756, 0.0012410556664690375, -0.00016714735829737037, -0.00016726553440093994
-- casterLF : 46
-- casterRF : 46
-- steerRatio : 4
-
-Section : electronics
-- tC1 : 6
-- tC2 : 6
-- abs : 6
-- eCUMap : 4
-- fuelMix : 0
-- telemetryLaps : 0
-
-Section : strategy
-- fuel : 60
-- nPitStops : 0
-- tyreSet : 0
-- frontBrakePadCompound : 1
-- rearBrakePadCompound : 1
-- pitStrategy : [object Object]
-- fuelPerLap : 2.549999952316284
-
-Section : advancedSetup
-
-Section : mechanicalBalance
-- aRBFront : 18
-- aRBRear : 1
-- wheelRate : 9, 9, 2, 2
-- bumpStopRateUp : 7, 7, 2, 2
-- bumpStopRateDn : 0, 0, 10, 10
-- bumpStopWindow : 2, 2, 50, 50
-- brakeTorque : 20
-- brakeBias : 50
-
-Section : dampers
-- bumpSlow : 8, 8, 8, 8
-- bumpFast : 2, 2, 3, 3
-- reboundSlow : 3, 3, 3, 3
-- reboundFast : 4, 4, 4, 4
-
-Section : aeroBalance
-- rideHeight : 5, 6, 6, 18
-- rodLength : -32.58224105834961, -32.58224105834961, -21.648622512817383, -21.648622512817383
-- splitter : 0
-- rearWing : 12
-- brakeDuct : 4, 4
-
-Section : drivetrain
-- preload : 9
-- trackBopType : 9
+{
+	"carName": "ferrari_488_gt3_evo",
+	"basicSetup":
+	{
+		"tyres":
+		{
+			"tyreCompound": 0,
+			"tyrePressure": [ 48, 48, 49, 49 ]
+		},
+		"alignment":
+		{
+			"camber": [ 14, 14, 18, 18 ],
+			"toe": [ 20, 20, 60, 60 ],
+			"staticCamber": [ -2.7899670600891113, -2.7899625301361084, -2.1245548725128174, -2.1244564056396484 ],
+			"toeOutLinear": [ 0.0012410542694851756, 0.0012410556664690375, -0.00016714735829737037, -0.00016726553440093994 ],
+			"casterLF": 46,
+			"casterRF": 46,
+			"steerRatio": 4
+		},
+		"electronics":
+		{
+			"tC1": 6,
+			"tC2": 6,
+			"abs": 6,
+			"eCUMap": 4,
+			"fuelMix": 0,
+			"telemetryLaps": 0
+		},
+		"strategy":
+		{
+			"fuel": 60,
+			"nPitStops": 0,
+			"tyreSet": 0,
+			"frontBrakePadCompound": 1,
+			"rearBrakePadCompound": 1,
+			"pitStrategy": [
+				{
+					"fuelToAdd": 0,
+					"tyres":
+					{
+						"tyreCompound": 0,
+						"tyrePressure": [ 48, 48, 49, 49 ]
+					},
+					"tyreSet": 2,
+					"frontBrakePadCompound": 1,
+					"rearBrakePadCompound": 1
+				}
+			],
+			"fuelPerLap": 2.5499999523162842
+		}
+	},
+	"advancedSetup":
+	{
+		"mechanicalBalance":
+		{
+			"aRBFront": 18,
+			"aRBRear": 1,
+			"wheelRate": [ 9, 9, 2, 2 ],
+			"bumpStopRateUp": [ 7, 7, 2, 2 ],
+			"bumpStopRateDn": [ 0, 0, 10, 10 ],
+			"bumpStopWindow": [ 2, 2, 50, 50 ],
+			"brakeTorque": 20,
+			"brakeBias": 50
+		},
+		"dampers":
+		{
+			"bumpSlow": [ 8, 8, 8, 8 ],
+			"bumpFast": [ 2, 2, 3, 3 ],
+			"reboundSlow": [ 3, 3, 3, 3 ],
+			"reboundFast": [ 4, 4, 4, 4 ]
+		},
+		"aeroBalance":
+		{
+			"rideHeight": [ 5, 6, 6, 18 ],
+			"rodLength": [ -32.582241058349609, -32.582241058349609, -21.648622512817383, -21.648622512817383 ],
+			"splitter": 0,
+			"rearWing": 12,
+			"brakeDuct": [ 4, 4 ]
+		},
+		"drivetrain":
+		{
+			"preload": 9
+		}
+	},
+	"trackBopType": 9
+}

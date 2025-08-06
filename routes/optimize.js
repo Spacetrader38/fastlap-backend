@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const sgMail = require("@sendgrid/mail");
 const injectModifications = require("../injectModifications");
-const convertTxtToJson = require("../convertTxtToJson"); // ✅ AJOUT ICI
+const convertTxtToJson = require("../convertTxtToJson"); // ✅ Fonction importée
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -18,7 +18,6 @@ router.post("/", async (req, res) => {
     game,
     car,
     track,
-    category,
     entryBehavior,
     behavior,
     brakeBehavior,
@@ -33,156 +32,111 @@ router.post("/", async (req, res) => {
     email,
   } = req.body;
 
-  if (!game || !car || !track || !category || !weather || !sessionType || !email) {
-    return res.status(400).json({ error: "Champs manquants" });
-  }
-
   try {
-    const setupBasePath = path.join(
-      __dirname,
-      "../setupsIA",
-      track,
-      category,
-      `setup_base_${car}.txt`
-    );
+    const basePath = path.join(__dirname, `../baseSetups/${game}/${track}/${car}.txt`);
+    const prompt = fs.readFileSync(basePath, "utf-8");
 
-    if (!fs.existsSync(setupBasePath)) {
-      return res.status(404).json({ error: "Setup de base introuvable pour cette voiture et circuit" });
-    }
+    const fullPrompt = `
+Tu es un ingénieur de course spécialisé en setup dans le simulateur ${game}.
+Voici un setup de base pour la voiture ${car} sur le circuit ${track} :
 
-    const baseSetup = fs.readFileSync(setupBasePath, "utf-8");
+${prompt}
 
-    const userPrompt = `Tu es un ingénieur en sport automobile expert des setups dans ${game}.
+Modifie uniquement les paramètres nécessaires en fonction des éléments suivants :
+- Comportement en entrée de virage : ${entryBehavior}
+- Comportement en sortie de virage : ${behavior}
+- Comportement au freinage : ${brakeBehavior}
+- Comportement sur les vibreurs : ${curbBehavior}
+- Pression cible à chaud : ${targetPressure} psi
+- Météo : ${weather}, Température air : ${tempAir}°C, piste : ${tempTrack}°C
+- Type de session : ${sessionType}, durée : ${duration} minutes
 
-Tu dois analyser le fichier de setup de base ci-dessous (au format texte brut) et identifier **les paramètres exacts à modifier**, section par section, en fonction des contraintes suivantes.
+Explique uniquement les paramètres à modifier, section par section.
+Renvoie les modifications dans ce format exact :
 
----
+Section : nom_section
+- nomParamètre : valeur
+- autreParamètre : [valeurs]...
 
-📄 Fichier de setup de base :
+Ne renvoie rien d'autre que les modifications.
 
-${baseSetup}
-
----
-
-🎯 Contraintes à appliquer :
-- Comportement en entrée de virage : ${entryBehavior || "non précisé"}
-- Comportement en sortie de virage : ${behavior || "non précisé"}
-- Comportement au freinage : ${brakeBehavior || "non précisé"}
-- Comportement sur les vibreurs : ${curbBehavior || "non précisé"}
-- Objectif de pression à chaud : ${targetPressure ? targetPressure + " PSI" : "non précisé"}
-- Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
-- Conditions météo : ${weather}${tempTrack ? `, piste ${tempTrack}°C` : ""}${tempAir ? `, air ${tempAir}°C` : ""}
-${notes ? `- Remarques personnalisées : ${notes}` : ""}
-
----
-
-💡 Instructions obligatoires :
-- Ajuste avec précision les suspensions : amortisseurs, ressorts, barres anti-roulis, bumpstops, hauteurs de caisse.
-- Adapte la balance aérodynamique (aileron avant/arrière + hauteurs de caisse) en fonction du tracé du circuit et des conditions météo.
-- Déduis les pressions à froid nécessaires pour atteindre la pression cible à chaud.
-- Calcule automatiquement la quantité d’essence nécessaire pour la durée de la session.
-- Ne modifie que les paramètres nécessaires à ces ajustements.
-
----
-
-📦 Format de réponse obligatoire :
-
-Section : <nom_de_section>
-- <paramètre> : <valeur>
-- <paramètre> : <valeur>
-
-Section : <autre_section>
-- etc.
-
-⚠️ Ne renvoie que les paramètres à modifier.
-⚠️ Aucune explication, aucun commentaire, aucun texte introductif, aucun markdown.
-
-❌ Si tu ne peux pas traiter cette demande pour une raison précise (limite technique, sécurité, etc.), indique uniquement : "Refus de traitement : <motif>"`;
+Informations supplémentaires données par le client : ${notes || "Aucune"}
+`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-1106-preview",
+      model: "gpt-4o",
       messages: [
-        {
-          role: "system",
-          content:
-            "Tu es un ingénieur en sport automobile expert en setups pour Assetto Corsa Competizione et rFactor 2. Tu dois analyser un fichier texte de setup fourni et renvoyer uniquement les sections à modifier. Aucun commentaire. Si refus, indiquer clairement le motif.",
-        },
-        { role: "user", content: userPrompt },
+        { role: "system", content: "Tu es un ingénieur setup ACC/rFactor2." },
+        { role: "user", content: fullPrompt },
       ],
-      temperature: 0.3,
+      temperature: 0.7,
     });
 
-    const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
-
-    const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
-    const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
+    const modifTxt = completion.choices[0].message.content;
     const timestamp = Date.now();
-    const extension = game === "Assetto Corsa Competizione" ? "json" : "svm";
+    const modifPath = path.join(__dirname, `../setupsIA/${track}/modif_${car}_${timestamp}.txt`);
+    const finalTxtPath = path.join(__dirname, `../setupsIA/${track}/setup_final_${car}_${track}_${timestamp}.txt`);
 
-    const modificationsFile = `modifications_${safeCar}_${safeTrack}_${timestamp}.txt`;
-    const modificationsPath = path.join(__dirname, "../setupsIA", modificationsFile);
-    let finalFileName = `setup_final_${safeCar}_${safeTrack}_${timestamp}.${extension}`;
-    let finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
+    fs.writeFileSync(modifPath, modifTxt, "utf-8");
+    injectModifications(basePath, modifPath, finalTxtPath);
 
-    fs.writeFileSync(modificationsPath, reply, "utf-8");
-
-    injectModifications(setupBasePath, modificationsPath, finalFilePath);
-
-    // ✅ CONVERSION .txt → .json SI NÉCESSAIRE
-    if (extension === "json") {
-      const convertedJsonPath = finalFilePath.replace(".json", "_converted.json");
-      await convertTxtToJson(finalFilePath, convertedJsonPath);
-      finalFilePath = convertedJsonPath;
-      finalFileName = path.basename(convertedJsonPath);
+    if (game === "Assetto Corsa Competizione") {
+      convertTxtToJson(finalTxtPath); // ⬅️ Génère le fichier .json final
     }
 
-    await OptimizeRequest.create({
+    // Sauvegarde en base
+    const optimizeReq = new OptimizeRequest({
       game,
       car,
       track,
-      category,
-      handling: behavior || null,
-      entryBehavior: entryBehavior || null,
-      brakeBehavior: brakeBehavior || null,
-      curbBehavior: curbBehavior || null,
-      targetPressure: targetPressure || null,
+      entryBehavior,
+      behavior,
+      brakeBehavior,
+      curbBehavior,
+      targetPressure,
       weather,
-      tempAir: tempAir || null,
-      tempTrack: tempTrack || null,
+      tempAir,
+      tempTrack,
       sessionType,
-      duration: duration || null,
-      notes: notes || null,
-      aiResponse: reply,
+      duration,
+      notes,
+      email,
+      result: modifTxt,
     });
+
+    await optimizeReq.save();
+
+    // Mail avec le fichier en PJ
+    const fileName = `setup_final_${car}_${track}_${timestamp}.${game === "Assetto Corsa Competizione" ? "json" : "svm"}`;
+    const filePath = finalTxtPath.replace(".txt", `.${game === "Assetto Corsa Competizione" ? "json" : "svm"}`);
 
     const client = await Client.findOne({ email });
 
-    if (client) {
-      const emailData = {
-        to: client.email,
-        from: "contact@fastlap-engineering.fr",
-        subject: `Votre setup IA pour ${car} – ${track}`,
-        text: `Bonjour ${client.prenom} ${client.nom},\n\nVeuillez trouver ci-joint le setup final optimisé par notre outil de développement.\n\nSportivement,\nL'équipe FastLap Engineering`,
-        attachments: [
-          {
-            content: fs.readFileSync(finalFilePath).toString("base64"),
-            filename: finalFileName,
-            type: "application/octet-stream",
-            disposition: "attachment",
-          },
-        ],
-      };
+    const msg = {
+      to: email,
+      from: "contact@fastlap-engineering.fr",
+      subject: "Votre setup personnalisé FastLap",
+      html: `
+        <p>Bonjour ${client?.civilite || ""} ${client?.prenom || ""} ${client?.nom || ""},</p>
+        <p>Voici votre setup personnalisé pour ${car} sur ${track} dans ${game}.</p>
+        <p>Merci pour votre confiance !</p>
+        <a href="https://www.fastlap-engineering.fr">← Retour à la boutique</a>
+      `,
+      attachments: [
+        {
+          content: fs.readFileSync(filePath).toString("base64"),
+          filename: fileName,
+          type: "text/plain",
+          disposition: "attachment",
+        },
+      ],
+    };
 
-      await sgMail.send(emailData);
-      console.log("📩 Setup IA envoyé à", client.email);
-    } else {
-      console.error("❌ Aucun client trouvé avec l'email :", email);
-    }
-
-    res.json({ reply, filename: finalFileName });
+    await sgMail.send(msg);
+    res.status(200).json({ message: "Setup généré et envoyé." });
   } catch (err) {
-    console.error("Erreur OpenAI, Mongo ou SendGrid :", err);
-    res.status(500).json({ error: "Erreur serveur" });
+    console.error("Erreur optimize.js :", err);
+    res.status(500).json({ error: "Échec génération setup." });
   }
 });
 

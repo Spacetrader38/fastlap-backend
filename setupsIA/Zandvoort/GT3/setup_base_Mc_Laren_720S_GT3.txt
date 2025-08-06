@@ -1,62 +1,86 @@
-- carName : mclaren_720s_gt3
-
-Section : basicSetup
-
-Section : tyres
-- tyreCompound : 0
-- tyrePressure : 54, 54, 48, 48
-
-Section : alignment
-- camber : 8, 8, 15, 15
-- toe : 38, 38, 20, 20
-- staticCamber : -4.79848051071167, -4.798477649688721, -4.620548248291016, -4.620550155639648
-- toeOutLinear : 0.0018602543277665973, 0.0018602325581014156, 0.0005551960784941912, 0.0005551935755647719
-- casterLF : 11
-- casterRF : 11
-- steerRatio : 2
-
-Section : electronics
-- tC1 : 6
-- tC2 : 6
-- abs : 6
-- eCUMap : 0
-- fuelMix : 0
-- telemetryLaps : 0
-
-Section : strategy
-- fuel : 60
-- nPitStops : 0
-- tyreSet : 0
-- frontBrakePadCompound : 1
-- rearBrakePadCompound : 1
-- pitStrategy : [object Object]
-- fuelPerLap : 2.6600000858306885
-
-Section : advancedSetup
-
-Section : mechanicalBalance
-- aRBFront : 1
-- aRBRear : 4
-- wheelRate : 2, 2, 3, 3
-- bumpStopRateUp : 5, 5, 2, 2
-- bumpStopRateDn : 0, 0, 10, 10
-- bumpStopWindow : 1, 1, 50, 50
-- brakeTorque : 20
-- brakeBias : 55
-
-Section : dampers
-- bumpSlow : 20, 20, 20, 20
-- bumpFast : 23, 23, 30, 30
-- reboundSlow : 8, 8, 22, 22
-- reboundFast : 20, 20, 27, 27
-
-Section : aeroBalance
-- rideHeight : 12, 6, 16, 18
-- rodLength : 63.580360412597656, 63.580360412597656, 39.011138916015625, 39.011138916015625
-- splitter : 0
-- rearWing : 6
-- brakeDuct : 4, 4
-
-Section : drivetrain
-- preload : 6
-- trackBopType : 9
+{
+	"carName": "mclaren_720s_gt3",
+	"basicSetup":
+	{
+		"tyres":
+		{
+			"tyreCompound": 0,
+			"tyrePressure": [ 54, 54, 48, 48 ]
+		},
+		"alignment":
+		{
+			"camber": [ 8, 8, 15, 15 ],
+			"toe": [ 38, 38, 20, 20 ],
+			"staticCamber": [ -4.7984805107116699, -4.7984776496887207, -4.6205482482910156, -4.6205501556396484 ],
+			"toeOutLinear": [ 0.0018602543277665973, 0.0018602325581014156, 0.00055519607849419117, 0.00055519357556477189 ],
+			"casterLF": 11,
+			"casterRF": 11,
+			"steerRatio": 2
+		},
+		"electronics":
+		{
+			"tC1": 6,
+			"tC2": 6,
+			"abs": 6,
+			"eCUMap": 0,
+			"fuelMix": 0,
+			"telemetryLaps": 0
+		},
+		"strategy":
+		{
+			"fuel": 60,
+			"nPitStops": 0,
+			"tyreSet": 0,
+			"frontBrakePadCompound": 1,
+			"rearBrakePadCompound": 1,
+			"pitStrategy": [
+				{
+					"fuelToAdd": 0,
+					"tyres":
+					{
+						"tyreCompound": 0,
+						"tyrePressure": [ 54, 54, 48, 48 ]
+					},
+					"tyreSet": 2,
+					"frontBrakePadCompound": 1,
+					"rearBrakePadCompound": 1
+				}
+			],
+			"fuelPerLap": 2.6600000858306885
+		}
+	},
+	"advancedSetup":
+	{
+		"mechanicalBalance":
+		{
+			"aRBFront": 1,
+			"aRBRear": 4,
+			"wheelRate": [ 2, 2, 3, 3 ],
+			"bumpStopRateUp": [ 5, 5, 2, 2 ],
+			"bumpStopRateDn": [ 0, 0, 10, 10 ],
+			"bumpStopWindow": [ 1, 1, 50, 50 ],
+			"brakeTorque": 20,
+			"brakeBias": 55
+		},
+		"dampers":
+		{
+			"bumpSlow": [ 20, 20, 20, 20 ],
+			"bumpFast": [ 23, 23, 30, 30 ],
+			"reboundSlow": [ 8, 8, 22, 22 ],
+			"reboundFast": [ 20, 20, 27, 27 ]
+		},
+		"aeroBalance":
+		{
+			"rideHeight": [ 12, 6, 16, 18 ],
+			"rodLength": [ 63.580360412597656, 63.580360412597656, 39.011138916015625, 39.011138916015625 ],
+			"splitter": 0,
+			"rearWing": 6,
+			"brakeDuct": [ 4, 4 ]
+		},
+		"drivetrain":
+		{
+			"preload": 6
+		}
+	},
+	"trackBopType": 9
+}

@@ -1,19 +1,56 @@
 const fs = require("fs");
 const path = require("path");
 
-function convertTxtToJson(txtInputPath, jsonOutputPath) {
-  const lines = fs.readFileSync(txtInputPath, "utf-8").split("\n");
+// Dictionnaire de correspondance voiture → carName officiel ACC
+const carMap = {
+  "Aston Martin": "amr_v8_vantage_gt3",
+  "Audi R8 LMS Evo": "audi_r8_lms_evo",
+  "Bentley Continentale": "bentley_continental_gt3",
+  "BMW M6 GT3": "bmw_m6_gt3",
+  "Ferrari 488 GT3 Evo": "ferrari_488_gt3_evo",
+  "Ferrari 488 GT3": "ferrari_488_gt3",
+  "Honda NSX GT3 Evo": "honda_nsx_gt3_evo",
+  "Lamborghini Hura Evo": "lamborghini_huracan_gt3_evo",
+  "Lamborghini Huracan": "lamborghini_huracan_gt3",
+  "Lexus GT3": "lexus_rc_f_gt3",
+  "Mc Laren 720S GT3": "mclaren_720s_gt3",
+  "Mercedes AMG GT3 2020": "mercedes_amg_gt3_2020",
+  "Mercedes AMG GT3": "mercedes_amg_gt3",
+  "Nissan GTR GT3": "nissan_gt_r_nismo_gt3",
+  "Porsche 991 GT3 R": "porsche_991_gt3_r",
+  "Porsche II 991 GT3 R": "porsche_991_ii_gt3_r"
+};
+
+function parseArray(value) {
+  return value
+    .replace(/\[|\]/g, "")
+    .split(",")
+    .map(v => {
+      const num = parseFloat(v.trim());
+      return isNaN(num) ? v.trim() : num;
+    });
+}
+
+function convertTxtToJson(txtPath) {
+  const jsonPath = txtPath.replace(".txt", ".json");
+
+  const fileNameParts = path.basename(txtPath, ".txt").split("_");
+  const carRaw = fileNameParts.slice(2).join(" ");
+  const carKey = Object.keys(carMap).find(name => carRaw.includes(name));
+  const carName = carMap[carKey] || "car_unknown";
+
+  const lines = fs.readFileSync(txtPath, "utf-8").split("\n");
 
   let jsonResult = {
-    carName: "amr_v8_vantage_gt3", // tu peux adapter dynamiquement plus tard
+    carName,
     basicSetup: {},
     advancedSetup: {},
     trackBopType: 9
   };
 
+  let currentTopLevel = "";
   let currentSection = "";
-  let targetRef = jsonResult.basicSetup;
-  const advancedSections = ["mechanicalBalance", "dampers", "aeroBalance", "drivetrain"];
+  let targetRef = null;
 
   for (let line of lines) {
     line = line.trim();
@@ -21,49 +58,43 @@ function convertTxtToJson(txtInputPath, jsonOutputPath) {
 
     const sectionMatch = line.match(/^\[(.+)]$/);
     if (sectionMatch) {
-      currentSection = sectionMatch[1];
-      targetRef = advancedSections.includes(currentSection) ? jsonResult.advancedSetup : jsonResult.basicSetup;
-      if (!targetRef[currentSection]) targetRef[currentSection] = {};
-      continue;
+      const sectionName = sectionMatch[1];
+      if (sectionName === "basicSetup" || sectionName === "advancedSetup") {
+        currentTopLevel = sectionName;
+        targetRef = jsonResult[currentTopLevel];
+        continue;
+      } else {
+        currentSection = sectionName;
+        if (targetRef && !targetRef[currentSection]) {
+          targetRef[currentSection] = {};
+        }
+        continue;
+      }
     }
 
     const [keyRaw, valueRaw] = line.split("=");
-    if (!keyRaw || !valueRaw) continue;
+    if (!keyRaw || !valueRaw || !currentSection || !targetRef) continue;
 
     const key = keyRaw.trim();
-    let valueStr = valueRaw.trim();
+    const valStr = valueRaw.trim();
     let value;
 
-    if (valueStr.startsWith("[")) {
-      try {
-        value = JSON.parse(valueStr.replace(/([0-9])\s*,/g, "$1,").replace(/,\s*]/, "]"));
-      } catch {
-        value = valueStr;
-      }
-    } else if (!isNaN(valueStr)) {
-      value = parseFloat(valueStr);
+    if (valStr.startsWith("[")) {
+      value = parseArray(valStr);
     } else {
-      value = valueStr;
+      const parsed = parseFloat(valStr);
+      value = isNaN(parsed) ? valStr : parsed;
     }
 
-    if (targetRef[currentSection]) {
-      targetRef[currentSection][key] = value;
+    if (!targetRef[currentSection]) {
+      targetRef[currentSection] = {};
     }
+    targetRef[currentSection][key] = value;
   }
 
-  // ✅ Sécurité pression pneus
-  try {
-    const p = jsonResult.basicSetup?.tyres?.tyrePressure;
-    if (Array.isArray(p) && p.some(v => v > 35 || v < 18)) {
-      console.warn("🚨 Pression pneus hors plage autorisée. Valeurs ajustées à 27 par défaut.");
-      jsonResult.basicSetup.tyres.tyrePressure = [27, 27, 27, 27];
-    }
-  } catch (e) {
-    console.error("Erreur lors du contrôle des pressions pneus :", e);
-  }
-
-  fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonResult, null, 2), "utf-8");
-  return jsonOutputPath;
+  fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
+  console.log("✅ Fichier .json généré :", jsonPath);
 }
 
+// Pas d'exécution automatique (important sur Render)
 module.exports = convertTxtToJson;
