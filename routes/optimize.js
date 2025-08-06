@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const sgMail = require("@sendgrid/mail");
 const injectModifications = require("../injectModifications");
-const convertTxtToJson = require("../convertTxtToJson"); // ✅ Fonction importée
+const convertTxtToJson = require("../convertTxtToJson");
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -35,7 +35,12 @@ router.post("/", async (req, res) => {
   try {
     const safeCar = car.replace(/ /g, "_").replace(/-/g, "_");
     const basePath = path.join(__dirname, `../setupsIA/Zandvoort/GT3/setup_base_${safeCar}.txt`);
+    
+    console.log("📁 Chemin fichier setup utilisé :", basePath);
+
     const prompt = fs.readFileSync(basePath, "utf-8");
+
+    console.log("📄 Contenu du fichier setup (début) :", prompt.substring(0, 300));
 
     const fullPrompt = `
 Tu es un ingénieur de course spécialisé en setup dans le simulateur ${game}.
@@ -64,6 +69,8 @@ Ne renvoie rien d'autre que les modifications.
 Informations supplémentaires données par le client : ${notes || "Aucune"}
 `;
 
+    console.log("🟦 Prompt envoyé à OpenAI :\n", fullPrompt);
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -82,10 +89,9 @@ Informations supplémentaires données par le client : ${notes || "Aucune"}
     injectModifications(basePath, modifPath, finalTxtPath);
 
     if (game === "Assetto Corsa Competizione") {
-      convertTxtToJson(finalTxtPath); // ⬅️ Génère le fichier .json final
+      convertTxtToJson(finalTxtPath);
     }
 
-    // Sauvegarde en base
     const optimizeReq = new OptimizeRequest({
       game,
       car,
@@ -102,12 +108,11 @@ Informations supplémentaires données par le client : ${notes || "Aucune"}
       duration,
       notes,
       email,
-      aiResponse: modifTxt, // ✅ champs correct
+      aiResponse: modifTxt,
     });
 
     await optimizeReq.save();
 
-    // Mail avec le fichier en PJ
     const fileName = `setup_final_${car}_${track}_${timestamp}.${game === "Assetto Corsa Competizione" ? "json" : "svm"}`;
     const filePath = finalTxtPath.replace(".txt", `.${game === "Assetto Corsa Competizione" ? "json" : "svm"}`);
 
@@ -134,7 +139,7 @@ Informations supplémentaires données par le client : ${notes || "Aucune"}
     };
 
     await sgMail.send(msg);
-    res.status(200).json({ message: "Setup généré et envoyé." });
+    res.status(200).json({ message: "Setup généré et envoyé.", aiResponse: modifTxt });
   } catch (err) {
     console.error("Erreur optimize.js :", err);
     res.status(500).json({ error: "Échec génération setup." });
