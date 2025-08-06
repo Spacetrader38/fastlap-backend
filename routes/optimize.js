@@ -7,9 +7,10 @@ const fs = require("fs");
 const path = require("path");
 const sgMail = require("@sendgrid/mail");
 const injectModifications = require("../injectModifications");
-const convertTxtToJson = require("../convertTxtToJson");
+const convertTxtToJson = require("../convertTxtToJson"); // ✅ AJOUT ICI
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 router.post("/", async (req, res) => {
@@ -112,8 +113,6 @@ Section : <autre_section>
     });
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
-    const usage = completion.usage || {};
-    const totalTokens = usage.total_tokens || 0;
 
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
@@ -126,8 +125,10 @@ Section : <autre_section>
     let finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
 
     fs.writeFileSync(modificationsPath, reply, "utf-8");
+
     injectModifications(setupBasePath, modificationsPath, finalFilePath);
 
+    // ✅ CONVERSION .txt → .json SI NÉCESSAIRE
     if (extension === "json") {
       const convertedJsonPath = finalFilePath.replace(".json", "_converted.json");
       await convertTxtToJson(finalFilePath, convertedJsonPath);
@@ -152,7 +153,6 @@ Section : <autre_section>
       duration: duration || null,
       notes: notes || null,
       aiResponse: reply,
-      tokensUsed: totalTokens, // ✅ Sauvegarde du nombre de tokens
     });
 
     const client = await Client.findOne({ email });
