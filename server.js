@@ -88,7 +88,7 @@ app.use(express.json()); // Après le webhook
 app.use("/api/payment", paymentRoutes);
 app.use('/api/clientInfo', clientInfoRoutes);
 app.use('/api/invoice', invoiceRoutes);
-app.use('/api/optimize', optimizeRoute); // <-- AJOUTÉ
+app.use('/api/optimize', optimizeRoute); // <-- correction route
 
 // ✅ ROUTE DE MONITORING
 app.get("/", (req, res) => {
