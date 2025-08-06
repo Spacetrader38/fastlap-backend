@@ -72,7 +72,7 @@ Informations supplémentaires données par le client : ${notes || "Aucune"}
     console.log("🟦 Prompt envoyé à OpenAI :\n", fullPrompt);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-1106-preview",
       messages: [
         { role: "system", content: "Tu es un ingénieur setup ACC/rFactor2." },
         { role: "user", content: fullPrompt },
