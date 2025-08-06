@@ -102,7 +102,7 @@ Informations supplémentaires données par le client : ${notes || "Aucune"}
       duration,
       notes,
       email,
-      result: modifTxt,
+      aiResponse: modifTxt, // ✅ champs correct
     });
 
     await optimizeReq.save();
