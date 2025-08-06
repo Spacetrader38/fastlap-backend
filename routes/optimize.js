@@ -3,12 +3,11 @@ const router = express.Router();
 const OpenAI = require("openai");
 const OptimizeRequest = require("../models/OptimizeRequest");
 const Client = require("../models/Client");
-const AccessToken = require("../models/AccessToken"); // ✅ nouveau modèle
 const fs = require("fs");
 const path = require("path");
 const sgMail = require("@sendgrid/mail");
 const injectModifications = require("../injectModifications");
-const convertTxtToJson = require("../convertTxtToJson");
+const convertTxtToJson = require("../convertTxtToJson"); // ✅ AJOUT ICI
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -32,42 +31,20 @@ router.post("/", async (req, res) => {
     duration,
     notes,
     email,
-    token,
   } = req.body;
-
-  // 🔒 VÉRIFICATION DU TOKEN D'ACCÈS
-  if (!token || !email) {
-    return res.status(403).json({ error: "Accès refusé : token ou email manquant" });
-  }
-
-  const tokenRecord = await AccessToken.findOne({ token });
-
-  if (!tokenRecord || tokenRecord.email !== email) {
-    return res.status(403).json({ error: "Accès refusé : token invalide ou non lié à cet email" });
-  }
-
-  // 🔁 GESTION DES ACCÈS
-  if (tokenRecord.type === "unitaire") {
-    await AccessToken.deleteOne({ token });
-  } else if (tokenRecord.type === "pack5") {
-    if (tokenRecord.remaining <= 0) {
-      return res.status(403).json({ error: "Pack épuisé : plus d'accès restants" });
-    }
-    tokenRecord.remaining -= 1;
-    await tokenRecord.save();
-  } else if (tokenRecord.type === "illimité") {
-    const now = new Date();
-    if (tokenRecord.expiresAt && now > new Date(tokenRecord.expiresAt)) {
-      return res.status(403).json({ error: "Abonnement expiré" });
-    }
-  }
 
   if (!game || !car || !track || !category || !weather || !sessionType || !email) {
     return res.status(400).json({ error: "Champs manquants" });
   }
 
   try {
-    const setupBasePath = path.join(__dirname, "../setupsIA", track, category, `setup_base_${car}.txt`);
+    const setupBasePath = path.join(
+      __dirname,
+      "../setupsIA",
+      track,
+      category,
+      `setup_base_${car}.txt`
+    );
 
     if (!fs.existsSync(setupBasePath)) {
       return res.status(404).json({ error: "Setup de base introuvable pour cette voiture et circuit" });
@@ -75,7 +52,52 @@ router.post("/", async (req, res) => {
 
     const baseSetup = fs.readFileSync(setupBasePath, "utf-8");
 
-    const userPrompt = `...`; // inchangé pour le moment
+    const userPrompt = `Tu es un ingénieur en sport automobile expert des setups dans ${game}.
+
+Tu dois analyser le fichier de setup de base ci-dessous (au format texte brut) et identifier **les paramètres exacts à modifier**, section par section, en fonction des contraintes suivantes.
+
+---
+
+📄 Fichier de setup de base :
+
+${baseSetup}
+
+---
+
+🎯 Contraintes à appliquer :
+- Comportement en entrée de virage : ${entryBehavior || "non précisé"}
+- Comportement en sortie de virage : ${behavior || "non précisé"}
+- Comportement au freinage : ${brakeBehavior || "non précisé"}
+- Comportement sur les vibreurs : ${curbBehavior || "non précisé"}
+- Objectif de pression à chaud : ${targetPressure ? targetPressure + " PSI" : "non précisé"}
+- Session : ${sessionType}${duration ? ` (${duration} min)` : ""}
+- Conditions météo : ${weather}${tempTrack ? `, piste ${tempTrack}°C` : ""}${tempAir ? `, air ${tempAir}°C` : ""}
+${notes ? `- Remarques personnalisées : ${notes}` : ""}
+
+---
+
+💡 Instructions obligatoires :
+- Ajuste avec précision les suspensions : amortisseurs, ressorts, barres anti-roulis, bumpstops, hauteurs de caisse.
+- Adapte la balance aérodynamique (aileron avant/arrière + hauteurs de caisse) en fonction du tracé du circuit et des conditions météo.
+- Déduis les pressions à froid nécessaires pour atteindre la pression cible à chaud.
+- Calcule automatiquement la quantité d’essence nécessaire pour la durée de la session.
+- Ne modifie que les paramètres nécessaires à ces ajustements.
+
+---
+
+📦 Format de réponse obligatoire :
+
+Section : <nom_de_section>
+- <paramètre> : <valeur>
+- <paramètre> : <valeur>
+
+Section : <autre_section>
+- etc.
+
+⚠️ Ne renvoie que les paramètres à modifier.
+⚠️ Aucune explication, aucun commentaire, aucun texte introductif, aucun markdown.
+
+❌ Si tu ne peux pas traiter cette demande pour une raison précise (limite technique, sécurité, etc.), indique uniquement : "Refus de traitement : <motif>"`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4-1106-preview",
@@ -92,12 +114,6 @@ router.post("/", async (req, res) => {
 
     const reply = completion.choices[0]?.message?.content || "Pas de réponse générée.";
 
-    console.log("🧠 Réponse OpenAI reçue :", reply);
-
-    if (!reply || reply.includes("Refus de traitement")) {
-      console.warn("⚠️ Réponse OpenAI vide ou refusée :", reply);
-    }
-
     const safeCar = car.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const safeTrack = track.replace(/[^\w\s]/gi, "").replace(/\s+/g, "_");
     const timestamp = Date.now();
@@ -108,19 +124,16 @@ router.post("/", async (req, res) => {
     let finalFileName = `setup_final_${safeCar}_${safeTrack}_${timestamp}.${extension}`;
     let finalFilePath = path.join(__dirname, "../setupsIA", finalFileName);
 
-    try {
-      fs.writeFileSync(modificationsPath, reply, "utf-8");
-      console.log("📄 Fichier de modifications écrit :", modificationsPath);
-    } catch (err) {
-      console.error("❌ Erreur écriture fichier modifications :", err);
-    }
+    fs.writeFileSync(modificationsPath, reply, "utf-8");
 
     injectModifications(setupBasePath, modificationsPath, finalFilePath);
 
+    // ✅ CONVERSION .txt → .json SI NÉCESSAIRE
     if (extension === "json") {
-      await convertTxtToJson(finalFilePath);
-      finalFilePath = finalFilePath.replace(".txt", ".json");
-      finalFileName = path.basename(finalFilePath);
+      const convertedJsonPath = finalFilePath.replace(".json", "_converted.json");
+      await convertTxtToJson(finalFilePath, convertedJsonPath);
+      finalFilePath = convertedJsonPath;
+      finalFileName = path.basename(convertedJsonPath);
     }
 
     await OptimizeRequest.create({
@@ -148,7 +161,7 @@ router.post("/", async (req, res) => {
       const emailData = {
         to: client.email,
         from: "contact@fastlap-engineering.fr",
-        subject: `Votre setup sur mesure pour ${car} – ${track}`,
+        subject: `Votre setup IA pour ${car} – ${track}`,
         text: `Bonjour ${client.prenom} ${client.nom},\n\nVeuillez trouver ci-joint le setup final optimisé par notre outil de développement.\n\nSportivement,\nL'équipe FastLap Engineering`,
         attachments: [
           {

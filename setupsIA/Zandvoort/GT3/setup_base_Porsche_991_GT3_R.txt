@@ -1,0 +1,62 @@
+- carName : porsche_991_gt3_r
+
+Section : basicSetup
+
+Section : tyres
+- tyreCompound : 0
+- tyrePressure : 50, 50, 50, 50
+
+Section : alignment
+- camber : 23, 23, 16, 16
+- toe : 30, 30, 60, 60
+- staticCamber : -4.228474140167236, -4.219640254974365, -3.507885217666626, -3.5078699588775635
+- toeOutLinear : 0.0001766592904459685, 0.0001664456067373976, -0.0008142839069478214, -0.0008142680744640529
+- casterLF : 11
+- casterRF : 11
+- steerRatio : 3
+
+Section : electronics
+- tC1 : 5
+- tC2 : 0
+- abs : 6
+- eCUMap : 3
+- fuelMix : 0
+- telemetryLaps : 0
+
+Section : strategy
+- fuel : 60
+- nPitStops : 0
+- tyreSet : 0
+- frontBrakePadCompound : 1
+- rearBrakePadCompound : 1
+- pitStrategy : [object Object]
+- fuelPerLap : 2.799999952316284
+
+Section : advancedSetup
+
+Section : mechanicalBalance
+- aRBFront : 2
+- aRBRear : 2
+- wheelRate : 3, 3, 3, 3
+- bumpStopRateUp : 7, 7, 2, 2
+- bumpStopRateDn : 0, 0, 10, 10
+- bumpStopWindow : 10, 10, 50, 50
+- brakeTorque : 20
+- brakeBias : 45
+
+Section : dampers
+- bumpSlow : 6, 6, 3, 3
+- bumpFast : 7, 7, 4, 4
+- reboundSlow : 5, 5, 6, 6
+- reboundFast : 7, 7, 8, 8
+
+Section : aeroBalance
+- rideHeight : 0, 11, 12, 18
+- rodLength : 15.998586654663086, 15.998586654663086, 22.54912757873535, 22.54912757873535
+- splitter : 0
+- rearWing : 12
+- brakeDuct : 4, 4
+
+Section : drivetrain
+- preload : 10
+- trackBopType : 9

@@ -9,34 +9,29 @@ function injectModifications(basePath, modifsPath, outputPath) {
   const baseLines = fs.readFileSync(basePath, "utf-8").split("\n");
   const rawModifs = fs.readFileSync(modifsPath, "utf-8");
 
-  // 🔁 Étape 1 : Parser les modifications reçues d’OpenAI
   let currentSection = "";
   const modifications = {};
 
   rawModifs.split("\n").forEach(line => {
-    line = line.trim();
-    if (!line) return;
-
     if (line.startsWith("Section")) {
       currentSection = line.split(":")[1]?.trim();
       if (currentSection) {
         modifications[currentSection] = {};
       }
     } else if (line.startsWith("-") && currentSection) {
-      const content = line.substring(1).split(":");
+      const content = line.substring(2).split(":");
       if (content.length >= 2) {
         const key = content[0].trim();
-        const valueRaw = content.slice(1).join(":").trim();
+        const value = content.slice(1).join(":").trim(); // Pour les cas avec ":" dans la valeur
         try {
-          modifications[currentSection][key] = JSON.parse(valueRaw);
+          modifications[currentSection][key] = JSON.parse(value);
         } catch {
-          modifications[currentSection][key] = valueRaw;
+          modifications[currentSection][key] = value;
         }
       }
     }
   });
 
-  // 🔁 Étape 2 : Injection dans les sections du setup de base
   const sectionRegex = /^\[(.+)]$/;
   let currentSectionName = "";
   const outputLines = [];
@@ -49,38 +44,20 @@ function injectModifications(basePath, modifsPath, outputPath) {
       continue;
     }
 
-    const keyValMatch = line.match(/^(\s*"?.+?"?)\s*=\s*(.+)$/); // clé = valeur
+    const [key, val] = line.split("=");
     if (
-      keyValMatch &&
-      currentSectionName &&
+      key &&
       modifications[currentSectionName] &&
-      modifications[currentSectionName].hasOwnProperty(keyValMatch[1].trim())
+      modifications[currentSectionName].hasOwnProperty(key.trim())
     ) {
-      const key = keyValMatch[1].trim();
-      const newVal = modifications[currentSectionName][key];
-      const formatted = Array.isArray(newVal)
-        ? `[ ${newVal.join(", ")} ]`
-        : newVal;
-      outputLines.push(`${key} = ${formatted}`);
+      const newVal = modifications[currentSectionName][key.trim()];
+      outputLines.push(
+        `${key.trim()} = ${Array.isArray(newVal) ? `[ ${newVal.join(", ")} ]` : newVal}`
+      );
     } else {
-      outputLines.push(line); // conserve ligne inchangée
+      outputLines.push(line);
     }
   }
-
-  // 🔁 Étape 3 : Ajoute les sections absentes du fichier de base
-  Object.entries(modifications).forEach(([section, params]) => {
-    const header = `[${section}]`;
-    const alreadyExists = outputLines.some(line => line.trim() === header);
-    if (!alreadyExists) {
-      outputLines.push(`\n${header}`);
-      Object.entries(params).forEach(([key, value]) => {
-        const formatted = Array.isArray(value)
-          ? `[ ${value.join(", ")} ]`
-          : value;
-        outputLines.push(`${key} = ${formatted}`);
-      });
-    }
-  });
 
   fs.writeFileSync(outputPath, outputLines.join("\n"), "utf-8");
   return outputPath;

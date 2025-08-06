@@ -1,0 +1,62 @@
+- carName : mercedes_amg_gt3_evo
+
+Section : basicSetup
+
+Section : tyres
+- tyreCompound : 0
+- tyrePressure : 50, 50, 48, 48
+
+Section : alignment
+- camber : 25, 25, 15, 15
+- toe : 30, 30, 45, 45
+- staticCamber : -3.737586498260498, -3.7375948429107666, -3.1261439323425293, -3.210317611694336
+- toeOutLinear : 0.00043982011266052723, 0.00043984880903735757, 0.00009828720067162067, 0.0001000218908302486
+- casterLF : 34
+- casterRF : 34
+- steerRatio : 3
+
+Section : electronics
+- tC1 : 6
+- tC2 : 0
+- abs : 6
+- eCUMap : 1
+- fuelMix : 0
+- telemetryLaps : 0
+
+Section : strategy
+- fuel : 60
+- nPitStops : 0
+- tyreSet : 0
+- frontBrakePadCompound : 1
+- rearBrakePadCompound : 1
+- pitStrategy : [object Object]
+- fuelPerLap : 2.640000104904175
+
+Section : advancedSetup
+
+Section : mechanicalBalance
+- aRBFront : 2
+- aRBRear : 6
+- wheelRate : 3, 3, 3, 3
+- bumpStopRateUp : 4, 4, 3, 3
+- bumpStopRateDn : 0, 0, 10, 10
+- bumpStopWindow : 25, 25, 50, 50
+- brakeTorque : 20
+- brakeBias : 53
+
+Section : dampers
+- bumpSlow : 3, 3, 4, 4
+- bumpFast : 4, 4, 8, 8
+- reboundSlow : 5, 5, 8, 8
+- reboundFast : 6, 6, 6, 6
+
+Section : aeroBalance
+- rideHeight : 8, 6, 6, 18
+- rodLength : 6.0058817863464355, 6.0058817863464355, 62.41560363769531, 62.41560363769531
+- splitter : 4
+- rearWing : 6
+- brakeDuct : 4, 4
+
+Section : drivetrain
+- preload : 1
+- trackBopType : 9
