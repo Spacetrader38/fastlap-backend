@@ -49,11 +49,11 @@ Voici un setup de base pour la voiture ${car} sur le circuit ${track} :
 ${prompt}
 
 Modifie uniquement les paramètres nécessaires en fonction des éléments suivants :
-- Comportement en entrée de virage : ${entryBehavior}
-- Comportement en sortie de virage : ${behavior}
-- Comportement au freinage : ${brakeBehavior}
-- Comportement sur les vibreurs : ${curbBehavior}
-- Pression cible à chaud : ${targetPressure} psi
+- Comportement en entrée de virage : ${entryBehavior || "non précisé"}
+- Comportement en sortie de virage : ${behavior || "non précisé"}
+- Comportement au freinage : ${brakeBehavior || "non précisé"}
+- Comportement sur les vibreurs : ${curbBehavior || "non précisé"}
+- Pression cible à chaud : ${targetPressure || "non précisé"} psi
 - Météo : ${weather}, Température air : ${tempAir}°C, piste : ${tempTrack}°C
 - Type de session : ${sessionType}, durée : ${duration} minutes
 
