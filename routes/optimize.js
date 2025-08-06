@@ -33,7 +33,8 @@ router.post("/", async (req, res) => {
   } = req.body;
 
   try {
-    const basePath = path.join(__dirname, `../baseSetups/${game}/${track}/${car}.txt`);
+    const safeCar = car.replace(/ /g, "_").replace(/-/g, "_");
+    const basePath = path.join(__dirname, `../setupsIA/Zandvoort/GT3/setup_base_${safeCar}.txt`);
     const prompt = fs.readFileSync(basePath, "utf-8");
 
     const fullPrompt = `
