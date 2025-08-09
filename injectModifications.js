@@ -6,17 +6,54 @@ function injectModifications(basePath, modifsPath, outputPath) {
     throw new Error("Fichier de base ou de modifications manquant.");
   }
 
-  let baseData;
-  try {
-    const rawBase = fs.readFileSync(basePath, "utf-8").trim();
-    baseData = JSON.parse(rawBase);
-  } catch (err) {
-    console.error("❌ Erreur de parsing du setup de base :", err.message);
-    throw new Error("Fichier de base illisible ou mal formaté.");
-  }
+  // --- Lecture du fichier de base (format .txt à plat) ---
+  const rawBase = fs.readFileSync(basePath, "utf-8").trim();
+  const baseLines = rawBase.split("\n");
 
-  const rawModifs = fs.readFileSync(modifsPath, "utf-8");
+  let baseData = {};
+  let currentTopLevel = "";
   let currentSection = "";
+
+  baseLines.forEach(line => {
+    line = line.trim();
+    if (!line || line.startsWith("#")) return;
+
+    const sectionMatch = line.match(/^\[(.+)]$/);
+    if (sectionMatch) {
+      const sectionName = sectionMatch[1];
+      if (sectionName === "basicSetup" || sectionName === "advancedSetup") {
+        currentTopLevel = sectionName;
+        if (!baseData[currentTopLevel]) baseData[currentTopLevel] = {};
+      } else {
+        currentSection = sectionName;
+        if (currentTopLevel && !baseData[currentTopLevel][currentSection]) {
+          baseData[currentTopLevel][currentSection] = {};
+        }
+      }
+      return;
+    }
+
+    const [keyRaw, valueRaw] = line.split("=");
+    if (!keyRaw || !valueRaw || !currentSection || !currentTopLevel) return;
+
+    let value;
+    const valStr = valueRaw.trim();
+    if (valStr.startsWith("[")) {
+      value = valStr.replace(/\[|\]/g, "").split(",").map(v => {
+        const num = parseFloat(v.trim());
+        return isNaN(num) ? v.trim() : num;
+      });
+    } else {
+      const parsed = parseFloat(valStr);
+      value = isNaN(parsed) ? valStr : parsed;
+    }
+
+    baseData[currentTopLevel][currentSection][keyRaw.trim()] = value;
+  });
+
+  // --- Lecture du fichier de modifications OpenAI ---
+  const rawModifs = fs.readFileSync(modifsPath, "utf-8");
+  let currentModSection = "";
   const modifications = {};
 
   rawModifs.split("\n").forEach(line => {
@@ -24,23 +61,23 @@ function injectModifications(basePath, modifsPath, outputPath) {
     if (!line) return;
 
     if (line.startsWith("Section")) {
-      currentSection = line.split(":")[1]?.trim();
-      if (currentSection) modifications[currentSection] = {};
-    } else if (line.startsWith("-") && currentSection) {
+      currentModSection = line.split(":")[1]?.trim();
+      if (currentModSection) modifications[currentModSection] = {};
+    } else if (line.startsWith("-") && currentModSection) {
       const content = line.substring(1).split(":");
       if (content.length >= 2) {
         const key = content[0].trim();
         const valueRaw = content.slice(1).join(":").trim();
         try {
-          modifications[currentSection][key] = JSON.parse(valueRaw);
+          modifications[currentModSection][key] = JSON.parse(valueRaw);
         } catch {
-          modifications[currentSection][key] = valueRaw;
+          modifications[currentModSection][key] = valueRaw;
         }
       }
     }
   });
 
-  // Injection dans baseData
+  // --- Injection dans baseData ---
   for (const section in modifications) {
     const modifs = modifications[section];
     const target =
@@ -54,7 +91,24 @@ function injectModifications(basePath, modifsPath, outputPath) {
     Object.assign(target[section], modifs);
   }
 
-  fs.writeFileSync(outputPath, JSON.stringify(baseData, null, 2), "utf-8");
+  // --- Écriture du fichier final en .txt à plat ---
+  let outputTxt = "";
+  for (const topLevel of ["basicSetup", "advancedSetup"]) {
+    if (!baseData[topLevel]) continue;
+    outputTxt += `[${topLevel}]\n`;
+    for (const section in baseData[topLevel]) {
+      outputTxt += `[${section}]\n`;
+      for (const key in baseData[topLevel][section]) {
+        let val = baseData[topLevel][section][key];
+        if (Array.isArray(val)) {
+          val = `[${val.join(", ")}]`;
+        }
+        outputTxt += `${key}=${val}\n`;
+      }
+    }
+  }
+
+  fs.writeFileSync(outputPath, outputTxt, "utf-8");
   return outputPath;
 }
 
