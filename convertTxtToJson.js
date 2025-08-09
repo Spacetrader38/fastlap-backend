@@ -34,12 +34,28 @@ function parseArray(value) {
 function convertTxtToJson(txtPath) {
   const jsonPath = txtPath.replace(".txt", ".json");
 
+  // Lire le contenu brut du fichier txt
+  const rawContent = fs.readFileSync(txtPath, "utf-8").trim();
+
+  // ✅ Si le contenu est déjà un JSON complet, on le garde tel quel
+  if (rawContent.startsWith("{") && rawContent.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(rawContent);
+      fs.writeFileSync(jsonPath, JSON.stringify(parsed, null, 2), "utf-8");
+      console.log("✅ Fichier .json généré (déjà complet) :", jsonPath);
+      return;
+    } catch {
+      console.warn("⚠️ Contenu JSON invalide, tentative de parsing TXT...");
+    }
+  }
+
+  // 🔄 Sinon, on utilise l'ancienne logique pour parser le .txt à plat
   const fileNameParts = path.basename(txtPath, ".txt").split("_");
   const carRaw = fileNameParts.slice(2).join(" ");
   const carKey = Object.keys(carMap).find(name => carRaw.includes(name));
   const carName = carMap[carKey] || "car_unknown";
 
-  const lines = fs.readFileSync(txtPath, "utf-8").split("\n");
+  const lines = rawContent.split("\n");
 
   let jsonResult = {
     carName,
@@ -93,8 +109,7 @@ function convertTxtToJson(txtPath) {
   }
 
   fs.writeFileSync(jsonPath, JSON.stringify(jsonResult, null, 2), "utf-8");
-  console.log("✅ Fichier .json généré :", jsonPath);
+  console.log("✅ Fichier .json généré (converti depuis TXT) :", jsonPath);
 }
 
-// Pas d'exécution automatique (important sur Render)
 module.exports = convertTxtToJson;
