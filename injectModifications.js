@@ -4,7 +4,6 @@ const path = require("path");
 function parseValue(valStr) {
   const s = valStr.trim();
   if (s.startsWith("[") && s.endsWith("]")) {
-    // tableau -> split + parseFloat si possible
     return s
       .slice(1, -1)
       .split(",")
@@ -50,7 +49,6 @@ function parseFlatTxtToObject(txt) {
     const key = line.slice(0, eq).trim();
     const valStr = line.slice(eq + 1).trim();
 
-    // Gestion d’un éventuel flatten type key.subKey=...
     if (key.includes(".")) {
       const [k1, k2] = key.split(".");
       if (!baseData[currentTop][currentSection][k1] || typeof baseData[currentTop][currentSection][k1] !== "object") {
@@ -67,15 +65,13 @@ function parseFlatTxtToObject(txt) {
 
 function parseBaseSetupFlexible(rawBase) {
   const trimmed = rawBase.trim();
-  // JSON ?
   if (trimmed.startsWith("{")) {
     try {
       return JSON.parse(trimmed);
     } catch {
-      // tombera sur parsing TXT si JSON invalide
+      // si JSON invalide, on tombe sur parsing TXT
     }
   }
-  // TXT à plat
   return parseFlatTxtToObject(trimmed);
 }
 
@@ -96,7 +92,6 @@ function parseModifications(rawModifs) {
         const key = content[0].trim();
         const valueRaw = content.slice(1).join(":").trim();
 
-        // Essayer JSON (ex: [1,2,3]) sinon parse simple
         try {
           modifications[currentSection][key] = JSON.parse(valueRaw);
         } catch {
@@ -118,7 +113,11 @@ function injectModifications(basePath, modifsPath, outputPath) {
   const rawBase = fs.readFileSync(basePath, "utf-8");
   let baseData = parseBaseSetupFlexible(rawBase);
 
-  // Sanity: s’assurer des conteneurs
+  console.log("[injectModifications] Base setup sections:",
+    Object.keys(baseData.basicSetup || {}),
+    Object.keys(baseData.advancedSetup || {})
+  );
+
   if (!baseData.basicSetup) baseData.basicSetup = {};
   if (!baseData.advancedSetup) baseData.advancedSetup = {};
 
@@ -126,13 +125,14 @@ function injectModifications(basePath, modifsPath, outputPath) {
   const rawModifs = fs.readFileSync(modifsPath, "utf-8");
   const modifications = parseModifications(rawModifs);
 
+  console.log("[injectModifications] Modifications sections:",
+    Object.keys(modifications)
+  );
+
   // 3) Injection
   for (const section in modifications) {
     const modifs = modifications[section];
 
-    // privilégier basicSetup si la section existe déjà dedans,
-    // sinon advancedSetup si elle existe là,
-    // sinon on crée la section dans basicSetup par défaut.
     const target =
       Object.prototype.hasOwnProperty.call(baseData.basicSetup, section)
         ? baseData.basicSetup
@@ -144,7 +144,11 @@ function injectModifications(basePath, modifsPath, outputPath) {
     Object.assign(target[section], modifs);
   }
 
-  // 4) Écrire le résultat final en JSON complet (prêt ACC)
+  // 4) Log final complet avant sauvegarde
+  console.log("[injectModifications] Final setup JSON complet:");
+  console.log(JSON.stringify(baseData, null, 2));
+
+  // 5) Écrire le résultat final
   fs.writeFileSync(outputPath, JSON.stringify(baseData, null, 2), "utf-8");
   return outputPath;
 }
