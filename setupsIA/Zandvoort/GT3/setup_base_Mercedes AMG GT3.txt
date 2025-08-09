@@ -1,0 +1,51 @@
+[basicSetup]
+[tyres]
+tyreCompound=0
+tyrePressure=[50, 50, 48, 48]
+[alignment]
+camber=[25, 25, 15, 15]
+toe=[30, 30, 45, 45]
+staticCamber=[-3.3591270446777344, -3.3591277599334717, -3.168142557144165, -3.1681416034698486]
+toeOutLinear=[0.00013426023360807449, 0.00013426695659291, 0.00009935417619999498, 0.00009934430272551253]
+casterLF=34
+casterRF=34
+steerRatio=3
+[electronics]
+tC1=6
+tC2=0
+abs=6
+eCUMap=1
+fuelMix=0
+telemetryLaps=0
+[strategy]
+fuel=60
+nPitStops=0
+tyreSet=0
+frontBrakePadCompound=1
+rearBrakePadCompound=1
+pitStrategy=[[object Object]]
+fuelPerLap=2.640000104904175
+
+[advancedSetup]
+[mechanicalBalance]
+aRBFront=2
+aRBRear=6
+wheelRate=[3, 3, 3, 3]
+bumpStopRateUp=[4, 4, 3, 3]
+bumpStopRateDn=[0, 0, 10, 10]
+bumpStopWindow=[25, 25, 50, 50]
+brakeTorque=20
+brakeBias=53
+[dampers]
+bumpSlow=[3, 3, 4, 4]
+bumpFast=[4, 4, 8, 8]
+reboundSlow=[5, 5, 8, 8]
+reboundFast=[6, 6, 6, 6]
+[aeroBalance]
+rideHeight=[8, 6, 6, 18]
+rodLength=[12.743514060974121, 12.743514060974121, 69.035400390625, 69.035400390625]
+splitter=4
+rearWing=6
+brakeDuct=[4, 4]
+[drivetrain]
+preload=1
