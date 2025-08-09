@@ -76,7 +76,11 @@ function main() {
       continue;
     }
 
-    const baseNoExt = path.basename(name, path.extname(name));
+    // Forcer les underscores dans le nom de sortie
+    const baseNoExt = path
+      .basename(name, path.extname(name))
+      .replace(/\s+/g, "_");
+
     const outPath = path.join(TARGET_DIR, `${baseNoExt}.txt`);
 
     const flat = toFlatTxt(data);
